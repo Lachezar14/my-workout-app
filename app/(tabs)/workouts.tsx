@@ -4,51 +4,38 @@ import {
     StyleSheet,
     TouchableOpacity,
     View,
-    Dimensions
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Image } from "expo-image";
-
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 
-const { width } = Dimensions.get("window");
-const CARD_HEIGHT = 80;               // card height
-const IMAGE_WIDTH = width * 0.25;       // image takes 30% of card width
-
-export default function ExercisesScreen() {
-    const [exercises, setExercises] = useState<any[]>([]);
+export default function WorkoutsScreen() {
+    const [workouts, setWorkouts] = useState<any[]>([]);
     const router = useRouter();
 
     useFocusEffect(
         useCallback(() => {
-            const loadExercises = async () => {
-                const data = await AsyncStorage.getItem("exercises");
-                setExercises(data ? JSON.parse(data) : []);
+            const loadWorkouts = async () => {
+                const data = await AsyncStorage.getItem("workouts");
+                setWorkouts(data ? JSON.parse(data) : []);
             };
-            loadExercises();
+            loadWorkouts();
         }, [])
     );
 
     const renderItem = ({ item }: { item: any }) => (
         <TouchableOpacity
             style={styles.card}
-            onPress={() => router.push(`/exercise/${item.id}`)}
+            onPress={() => router.push(`/workout/${item.id}`)}
         >
-            <Image
-                source={
-                    item.image
-                        ? item.image
-                        : require("@/assets/images/favicon.png")
-                }
-                style={styles.cardImage}
-                autoplay={false}
-            />
             <View style={styles.cardTextContainer}>
                 <ThemedText type="defaultSemiBold" style={styles.cardTitle}>
                     {item.name}
+                </ThemedText>
+                <ThemedText type="default">
+                    {item.exercises.length} exercises
                 </ThemedText>
             </View>
         </TouchableOpacity>
@@ -58,15 +45,15 @@ export default function ExercisesScreen() {
         <SafeAreaView style={styles.safeArea}>
             <TouchableOpacity
                 style={styles.addButton}
-                onPress={() => router.push("/add-exercise")}
+                onPress={() => router.push("/add-workout")}
             >
                 <ThemedText type="defaultSemiBold" style={styles.addButtonText}>
-                    + Add Exercise
+                    + Add Workout
                 </ThemedText>
             </TouchableOpacity>
 
             <FlatList
-                data={exercises}
+                data={workouts}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
                 showsVerticalScrollIndicator={false}
@@ -104,25 +91,14 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         overflow: "hidden",
         backgroundColor: "rgb(47,47,47)",
-        elevation: 3,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        height: CARD_HEIGHT,                 // fixed height for card
-    },
-    cardImage: {
-        width: IMAGE_WIDTH,
-        height: "100%",                      // image fills card height
-        resizeMode: "cover",
+        padding: 16,
     },
     cardTextContainer: {
-        flex: 1,                             // take remaining horizontal space
+        flex: 1,
         justifyContent: "center",
-        paddingHorizontal: 12,
     },
     cardTitle: {
         fontSize: 16,
-        color: "#fff",
+        color: Colors.dark.text,
     },
 });
