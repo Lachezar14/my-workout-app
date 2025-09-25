@@ -61,7 +61,7 @@ export default function ExerciseDetails() {
         );
     };
 
-    const updateExercise = async () => {
+    const handleUpdateExercise = async () => {
         if (!exercise) return;
 
         try {
@@ -150,7 +150,7 @@ export default function ExerciseDetails() {
 
             {editMode ? (
                 <>
-                    <TouchableOpacity style={styles.editButton} onPress={updateExercise}>
+                    <TouchableOpacity style={styles.editButton} onPress={handleUpdateExercise}>
                         <ThemedText style={styles.buttonText}>Save</ThemedText>
                     </TouchableOpacity>
 
