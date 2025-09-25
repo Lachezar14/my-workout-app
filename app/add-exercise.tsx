@@ -1,11 +1,11 @@
 ﻿import { useState } from "react";
-import { View, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { StyleSheet, TextInput, TouchableOpacity, Image, ScrollView } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
+import {saveExercise} from "@/repository/exercisesRepository";
+import {Exercise} from "@/types/exercise";
 
 export default function AddExercise() {
     const [name, setName] = useState("");
@@ -27,19 +27,20 @@ export default function AddExercise() {
     };
 
     // Save exercise
-    const saveExercise = async () => {
-        const data = await AsyncStorage.getItem("exercises");
-        const exercises = data ? JSON.parse(data) : [];
-
-        const newExercise = {
-            id: Date.now(),
-            name,
-            description,
-            image: imageUri,
+    const handleSaveExercise = async () => {
+        const newExercise: Exercise = {
+            id: Date.now().toString(),
+            name: name || "Untitled Exercise",
+            description: description || "",
+            image: imageUri ?? undefined,
         };
 
-        await AsyncStorage.setItem("exercises", JSON.stringify([...exercises, newExercise]));
-        router.back(); // go back to Exercises list
+        try {
+            await saveExercise(newExercise);
+            router.back();
+        } catch (error) {
+            console.error("Error saving workout:", error);
+        }
     };
 
     return (
@@ -75,7 +76,7 @@ export default function AddExercise() {
 
             {imageUri && <Image source={{ uri: imageUri }} style={styles.preview} />}
 
-            <TouchableOpacity style={styles.saveButton} onPress={saveExercise}>
+            <TouchableOpacity style={styles.saveButton} onPress={handleSaveExercise}>
                 <ThemedText style={styles.saveButtonText}>Save Exercise</ThemedText>
             </TouchableOpacity>
         </ScrollView>

@@ -9,15 +9,16 @@ import {
     Alert,
     TouchableOpacity,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {useFocusEffect, useLocalSearchParams, useRouter} from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import { Image } from "expo-image";
 import { Workout } from "@/types/workout";
-import {Exercise, ExerciseWithSets} from "@/types/exercise";
+import { ExerciseWithSets } from "@/types/exercise";
 import { MaterialIcons } from "@expo/vector-icons";
+import {deleteWorkout, getWorkoutById, updateWorkoutExercises} from "@/repository/workoutRepository";
+import {getExercises} from "@/repository/exercisesRepository";
 
 const CARD_HEIGHT = 80; // total height of the card
 const IMAGE_WIDTH = 100; // can be smaller or bigger than CARD_HEIGHT
@@ -33,14 +34,8 @@ export default function WorkoutDetailsScreen() {
     useFocusEffect(
         useCallback(() => {
             const loadWorkout = async () => {
-                const wData = await AsyncStorage.getItem("workouts");
-                const eData = await AsyncStorage.getItem("exercises");
-                if (!wData || !eData) return;
-
-                const workouts: Workout[] = JSON.parse(wData);
-                const exercises: Exercise[] = JSON.parse(eData);
-
-                const foundWorkout = workouts.find(w => w.id.toString() === id);
+                const foundWorkout = await getWorkoutById(id);
+                const exercises = await getExercises();
                 if (!foundWorkout) return;
 
                 // Merge workout exercises with master exercises
@@ -59,8 +54,7 @@ export default function WorkoutDetailsScreen() {
             loadWorkout();
         }, [id])
     );
-    
-    // Update set
+
     const updateSet = (exerciseId: string, setIndex: number, reps: string) => {
         setExercisesWithSets(prev =>
             prev.map(ex =>
@@ -71,51 +65,37 @@ export default function WorkoutDetailsScreen() {
         );
     };
 
-    // Add new set
     const addSet = (exerciseId: string) => {
         setExercisesWithSets(prev =>
             prev.map(ex =>
-                ex.id === exerciseId
-                    ? { ...ex, sets: [...ex.sets, { reps: "" }] }
-                    : ex
+                ex.id === exerciseId ? { ...ex, sets: [...ex.sets, { reps: "" }] } : ex
             )
         );
     };
 
-    // Remove set
     const removeSet = (exerciseId: string) => {
         setExercisesWithSets(prev =>
             prev.map(ex =>
-                ex.id === exerciseId
-                    ? { ...ex, sets: ex.sets.slice(0, -1) } // remove the last set
-                    : ex
+                ex.id === exerciseId ? { ...ex, sets: ex.sets.slice(0, -1) } : ex
             )
         );
     };
 
     // Save workout
-    const saveWorkout = async () => {
+    const handleUpdateWorkout = async () => {
         if (!workout) return;
-
-        const data = await AsyncStorage.getItem("workouts");
-        const workouts: Workout[] = data ? JSON.parse(data) : [];
-        const index = workouts.findIndex(w => w.id === workout.id);
-        if (index === -1) return;
-
-        // Save updated sets back to workout
-        const updatedExercises = workout.exercises.map(we => {
-            const ex = exercisesWithSets.find(e => e.id === we.exerciseId);
-            return ex ? { ...we, sets: ex.sets } : we;
-        });
-
-        workouts[index] = { ...workout, exercises: updatedExercises };
-        await AsyncStorage.setItem("workouts", JSON.stringify(workouts));
-        Alert.alert("Saved", "Workout updated successfully");
-        setEditMode(false);
+        try {
+            await updateWorkoutExercises(workout.id, exercisesWithSets);
+            Alert.alert("Saved", "Workout updated successfully");
+            setEditMode(false);
+        } catch (error) {
+            console.error("Failed to save workout:", error);
+            Alert.alert("Error", "Failed to save workout");
+        }
     };
 
     // Delete workout
-    const deleteWorkout = async () => {
+    const handleDeleteWorkout = async () => {
         Alert.alert(
             "Delete Workout",
             "Are you sure you want to delete this workout?",
@@ -125,13 +105,13 @@ export default function WorkoutDetailsScreen() {
                     text: "Delete",
                     style: "destructive",
                     onPress: async () => {
-                        const data = await AsyncStorage.getItem("workouts");
-                        if (!data) return;
-                        const remaining = JSON.parse(data).filter(
-                            (w: Workout) => w.id.toString() !== id
-                        );
-                        await AsyncStorage.setItem("workouts", JSON.stringify(remaining));
-                        router.back();
+                        try {
+                            await deleteWorkout(id);
+                            router.back();
+                        } catch (error) {
+                            console.error("Failed to delete workout:", error);
+                            Alert.alert("Error", "Failed to delete workout");
+                        }
                     },
                 },
             ]
@@ -252,7 +232,7 @@ export default function WorkoutDetailsScreen() {
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            onPress={deleteWorkout}
+                            onPress={handleDeleteWorkout}
                             style={styles.iconButton}
                         >
                             <MaterialIcons name="delete" size={24} color="#FF4C4C" />
@@ -268,7 +248,7 @@ export default function WorkoutDetailsScreen() {
                 />
 
                 {editMode && (
-                    <TouchableOpacity style={styles.saveButton} onPress={saveWorkout}>
+                    <TouchableOpacity style={styles.saveButton} onPress={handleUpdateWorkout}>
                         <ThemedText style={styles.saveButtonText}>
                             Save Workout
                         </ThemedText>
@@ -292,10 +272,10 @@ const styles = StyleSheet.create({
     },
     headerButtons: {
         flexDirection: "row",
-        gap: 12, // space between icons
+        gap: 12,
     },
     iconButton: {
-        padding: 8, // increases touch area
+        padding: 8,
     },
     title: { 
         fontSize: 22, 
@@ -313,11 +293,11 @@ const styles = StyleSheet.create({
         backgroundColor: "rgb(47,47,47)",
         borderRadius: 12,
         overflow: "hidden",
-        height: CARD_HEIGHT, // set the card height here
+        height: CARD_HEIGHT,
     },
     image: {
-        width: IMAGE_WIDTH, // image width
-        height: "100%",     // take full card height
+        width: IMAGE_WIDTH,
+        height: "100%",
         resizeMode: "cover",
     },
     textContainer: {
@@ -348,7 +328,6 @@ const styles = StyleSheet.create({
         color: Colors.dark.background, 
         fontSize: 16 
     },
-
     deleteButton: {
         backgroundColor: "#FF4C4C",
         padding: 16,
@@ -360,18 +339,29 @@ const styles = StyleSheet.create({
         color: "#fff", 
         fontSize: 16 
     },
-    setsContainer: { paddingHorizontal: 12, marginTop: 8 },
+    setsContainer: { 
+        paddingHorizontal: 12, 
+        marginTop: 8 
+    },
     setsHeaderRow: {
         flexDirection: "row",
         justifyContent: "space-between",
         marginBottom: 4,
     },
-    setsHeaderText: { color: Colors.dark.text, fontWeight: "bold" },
-
-    setsDataRow: { flexDirection: "row", justifyContent: "space-between" },
+    setsHeaderText: { 
+        color: Colors.dark.text, 
+        fontWeight: "bold"
+    },
+    setsDataRow: { 
+        flexDirection: "row", 
+        justifyContent: "space-between" 
+    },
     setNumbers: {},
     repsValues: {},
-    repsValueText: { color: Colors.dark.text, marginBottom: 4 },
+    repsValueText: { 
+        color: Colors.dark.text, 
+        marginBottom: 4 
+    },
     addSetButton: {
         backgroundColor: Colors.dark.tint,
         padding: 8,
@@ -386,15 +376,22 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: "center",
     },
-    addSetButtonText: { color: Colors.dark.background },
-    removeSetButtonText: { color: Colors.dark.tint },
+    addSetButtonText: { 
+        color: Colors.dark.background 
+    },
+    removeSetButtonText: { 
+        color: Colors.dark.tint 
+    },
     editRow: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
         marginBottom: 4,
     },
-    setNumberText: { color: Colors.dark.text, width: 30 },
+    setNumberText: { 
+        color: Colors.dark.text, 
+        width: 30 
+    },
     repsInput: {
         borderWidth: 1,
         borderColor: Colors.dark.tint,

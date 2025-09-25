@@ -6,7 +6,6 @@ import {
     View,
     Dimensions
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -14,6 +13,7 @@ import { Image } from "expo-image";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import {Exercise} from "@/types/exercise";
+import {getExercises} from "@/repository/exercisesRepository";
 
 const { width } = Dimensions.get("window");
 const CARD_HEIGHT = 80; // card height
@@ -26,8 +26,8 @@ export default function ExercisesScreen() {
     useFocusEffect(
         useCallback(() => {
             const loadExercises = async () => {
-                const data = await AsyncStorage.getItem("exercises");
-                setExercises(data ? JSON.parse(data) : []);
+                const data = await getExercises();
+                setExercises(data);
             };
             loadExercises();
         }, [])

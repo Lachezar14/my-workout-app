@@ -15,6 +15,7 @@ import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import { Workout } from "@/types/workout";
 import { Exercise } from "@/types/exercise";
+import {saveWorkout} from "@/repository/workoutRepository";
 
 const { width } = Dimensions.get("window");
 const CARD_HEIGHT = 80;
@@ -42,7 +43,7 @@ export default function AddWorkout() {
         }
     };
 
-    const saveWorkout = async () => {
+    const handleSaveWorkout = async () => {
         const newWorkout: Workout = {
             id: Date.now().toString(),
             name: name || "Untitled Workout",
@@ -52,11 +53,12 @@ export default function AddWorkout() {
             })),
         };
 
-        const existing = await AsyncStorage.getItem("workouts");
-        const workouts = existing ? JSON.parse(existing) : [];
-        workouts.push(newWorkout);
-        await AsyncStorage.setItem("workouts", JSON.stringify(workouts));
-        router.back();
+        try {
+            await saveWorkout(newWorkout);
+            router.back();
+        } catch (error) {
+            console.error("Error saving workout:", error);
+        }
     };
 
     const renderItem = ({ item }: { item: Exercise }) => {
@@ -111,7 +113,7 @@ export default function AddWorkout() {
 
             {/* Save button pinned to bottom */}
             {selected.length > 0 && (
-                <TouchableOpacity style={styles.saveButton} onPress={saveWorkout}>
+                <TouchableOpacity style={styles.saveButton} onPress={handleSaveWorkout}>
                     <ThemedText style={styles.saveButtonText}>
                         Save Workout
                     </ThemedText>

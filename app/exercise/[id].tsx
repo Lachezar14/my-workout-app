@@ -7,7 +7,6 @@ import {
     TextInput,
     View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { ThemedView } from "@/components/themed-view";
@@ -15,6 +14,7 @@ import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import { Exercise } from "@/types/exercise";
 import * as ImagePicker from "expo-image-picker";
+import {deleteExercise, getExerciseById, updateExercise} from "@/repository/exercisesRepository";
 
 export default function ExerciseDetails() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,10 +27,7 @@ export default function ExerciseDetails() {
 
     useEffect(() => {
         const loadExercise = async () => {
-            const data = await AsyncStorage.getItem("exercises");
-            if (!data) return;
-            const exercises = JSON.parse(data);
-            const found = exercises.find((e: any) => e.id.toString() === id);
+            const found = await getExerciseById(id);
             if (found) {
                 setExercise(found);
                 setTitle(found.name);
@@ -41,7 +38,7 @@ export default function ExerciseDetails() {
         loadExercise();
     }, [id]);
 
-    const deleteExercise = async () => {
+    const handleDeleteExercise = async () => {
         Alert.alert(
             "Delete Exercise",
             "Are you sure you want to delete this exercise?",
@@ -51,31 +48,31 @@ export default function ExerciseDetails() {
                     text: "Delete",
                     style: "destructive",
                     onPress: async () => {
-                        const data = await AsyncStorage.getItem("exercises");
-                        if (!data) return;
-                        const exercises = JSON.parse(data).filter(
-                            (e: any) => e.id.toString() !== id
-                        );
-                        await AsyncStorage.setItem("exercises", JSON.stringify(exercises));
-                        router.back();
-                    },
+                        try {
+                            await deleteExercise(id);
+                            router.back();
+                        } catch (error) {
+                            console.error("Failed to delete workout:", error);
+                            Alert.alert("Error", "Failed to delete workout");
+                        }
+                    }
                 },
             ]
         );
     };
 
-    const saveExercise = async () => {
+    const updateExercise = async () => {
         if (!exercise) return;
-        const data = await AsyncStorage.getItem("exercises");
-        if (!data) return;
-        const exercises = JSON.parse(data).map((e: any) =>
-            e.id === exercise.id
-                ? { ...e, name: title, description, image }
-                : e
-        );
-        await AsyncStorage.setItem("exercises", JSON.stringify(exercises));
-        setExercise({ ...exercise, name: title, description, image });
-        setEditMode(false);
+
+        try {
+            const updated = { ...exercise, name: title, description, image };
+            await updateExercise(updated);
+            setExercise(updated);
+            setEditMode(false);
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Error", "Failed to save exercise");
+        }
     };
 
     const pickImage = async () => {
@@ -153,11 +150,11 @@ export default function ExerciseDetails() {
 
             {editMode ? (
                 <>
-                    <TouchableOpacity style={styles.editButton} onPress={saveExercise}>
+                    <TouchableOpacity style={styles.editButton} onPress={updateExercise}>
                         <ThemedText style={styles.buttonText}>Save</ThemedText>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.deleteButton} onPress={deleteExercise}>
+                    <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteExercise}>
                         <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
                     </TouchableOpacity>
                 </>

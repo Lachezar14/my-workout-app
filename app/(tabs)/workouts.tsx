@@ -5,26 +5,37 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import {Workout} from "@/types/workout";
+import {getWorkouts} from "@/repository/workoutRepository";
+import {getExercises} from "@/repository/exercisesRepository";
 
 export default function WorkoutsScreen() {
     const [workouts, setWorkouts] = useState<Workout[]>([]);
     const router = useRouter();
-
+    
     useFocusEffect(
         useCallback(() => {
             const loadWorkouts = async () => {
-                const data = await AsyncStorage.getItem("workouts");
-                setWorkouts(data ? JSON.parse(data) : []);
+                const workoutsData = await getWorkouts();
+                const exercisesData = await getExercises();
+
+                const syncedWorkouts = workoutsData.map(w => ({
+                    ...w,
+                    exercises: w.exercises.filter(we =>
+                        exercisesData.some(e => e.id === we.exerciseId)
+                    ),
+                }));
+
+                setWorkouts(syncedWorkouts);
             };
             loadWorkouts();
         }, [])
     );
+
 
     const renderItem = ({ item }: { item: any }) => (
         <TouchableOpacity
