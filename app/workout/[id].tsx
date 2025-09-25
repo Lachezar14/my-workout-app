@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+﻿import {useState, useCallback} from "react";
 import {
     FlatList,
     StyleSheet,
@@ -10,70 +10,87 @@ import {
     TouchableOpacity,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import {useFocusEffect, useLocalSearchParams, useRouter} from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import { Image } from "expo-image";
+import { Workout } from "@/types/workout";
+import {Exercise, ExerciseWithSets} from "@/types/exercise";
+import { MaterialIcons } from "@expo/vector-icons";
 
-type Set = { reps: string };
-type ExerciseWithSets = {
-    id: string;
-    name: string;
-    image?: string;
-    sets: Set[];
-};
-type Workout = {
-    id: string;
-    name: string;
-    exercises: ExerciseWithSets[];
-};
+const CARD_HEIGHT = 80; // total height of the card
+const IMAGE_WIDTH = 100; // can be smaller or bigger than CARD_HEIGHT
 
 export default function WorkoutDetailsScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const [workout, setWorkout] = useState<Workout | null>(null);
+    const [exercisesWithSets, setExercisesWithSets] = useState<ExerciseWithSets[]>([]);
     const [editMode, setEditMode] = useState(false);
     const router = useRouter();
 
-    // Load workout from AsyncStorage
-    useEffect(() => {
-        const loadWorkout = async () => {
-            const data = await AsyncStorage.getItem("workouts");
-            if (!data) return;
+    // Load workout & exercises
+    useFocusEffect(
+        useCallback(() => {
+            const loadWorkout = async () => {
+                const wData = await AsyncStorage.getItem("workouts");
+                const eData = await AsyncStorage.getItem("exercises");
+                if (!wData || !eData) return;
 
-            const workouts: Workout[] = JSON.parse(data);
-            const foundWorkout = workouts.find((w) => w.id.toString() === id);
-            if (!foundWorkout) return;
+                const workouts: Workout[] = JSON.parse(wData);
+                const exercises: Exercise[] = JSON.parse(eData);
 
-            // Ensure each exercise has sets array
-            const formatted = foundWorkout.exercises.map((ex) => ({
-                ...ex,
-                sets: ex.sets?.length ? ex.sets : [{ reps: "" }],
-            }));
+                const foundWorkout = workouts.find(w => w.id.toString() === id);
+                if (!foundWorkout) return;
 
-            setWorkout({ ...foundWorkout, exercises: formatted });
-        };
-        loadWorkout();
-    }, [id]);
+                // Merge workout exercises with master exercises
+                const merged: ExerciseWithSets[] = foundWorkout.exercises
+                    .map(we => {
+                        const ex = exercises.find(e => e.id === we.exerciseId);
+                        if (!ex) return null;
+                        return { ...ex, sets: we.sets };
+                    })
+                    .filter((e): e is ExerciseWithSets => e !== null);
 
+                setWorkout(foundWorkout);
+                setExercisesWithSets(merged);
+            };
+
+            loadWorkout();
+        }, [id])
+    );
+    
     // Update set
     const updateSet = (exerciseId: string, setIndex: number, reps: string) => {
-        if (!workout) return;
-        const updatedExercises = workout.exercises.map((ex) =>
-            ex.id === exerciseId
-                ? { ...ex, sets: ex.sets.map((s, i) => (i === setIndex ? { reps } : s)) }
-                : ex
+        setExercisesWithSets(prev =>
+            prev.map(ex =>
+                ex.id === exerciseId
+                    ? { ...ex, sets: ex.sets.map((s, i) => (i === setIndex ? { reps } : s)) }
+                    : ex
+            )
         );
-        setWorkout({ ...workout, exercises: updatedExercises });
     };
 
     // Add new set
     const addSet = (exerciseId: string) => {
-        if (!workout) return;
-        const updatedExercises = workout.exercises.map((ex) =>
-            ex.id === exerciseId ? { ...ex, sets: [...ex.sets, { reps: "" }] } : ex
+        setExercisesWithSets(prev =>
+            prev.map(ex =>
+                ex.id === exerciseId
+                    ? { ...ex, sets: [...ex.sets, { reps: "" }] }
+                    : ex
+            )
         );
-        setWorkout({ ...workout, exercises: updatedExercises });
+    };
+
+    // Remove set
+    const removeSet = (exerciseId: string) => {
+        setExercisesWithSets(prev =>
+            prev.map(ex =>
+                ex.id === exerciseId
+                    ? { ...ex, sets: ex.sets.slice(0, -1) } // remove the last set
+                    : ex
+            )
+        );
     };
 
     // Save workout
@@ -82,9 +99,16 @@ export default function WorkoutDetailsScreen() {
 
         const data = await AsyncStorage.getItem("workouts");
         const workouts: Workout[] = data ? JSON.parse(data) : [];
-        const index = workouts.findIndex((w) => w.id.toString() === workout.id);
-        if (index !== -1) workouts[index] = workout;
+        const index = workouts.findIndex(w => w.id === workout.id);
+        if (index === -1) return;
 
+        // Save updated sets back to workout
+        const updatedExercises = workout.exercises.map(we => {
+            const ex = exercisesWithSets.find(e => e.id === we.exerciseId);
+            return ex ? { ...we, sets: ex.sets } : we;
+        });
+
+        workouts[index] = { ...workout, exercises: updatedExercises };
         await AsyncStorage.setItem("workouts", JSON.stringify(workouts));
         Alert.alert("Saved", "Workout updated successfully");
         setEditMode(false);
@@ -93,8 +117,8 @@ export default function WorkoutDetailsScreen() {
     // Delete workout
     const deleteWorkout = async () => {
         Alert.alert(
-            "Delete Exercise",
-            "Are you sure you want to delete this exercise?",
+            "Delete Workout",
+            "Are you sure you want to delete this workout?",
             [
                 { text: "Cancel", style: "cancel" },
                 {
@@ -103,10 +127,10 @@ export default function WorkoutDetailsScreen() {
                     onPress: async () => {
                         const data = await AsyncStorage.getItem("workouts");
                         if (!data) return;
-                        const exercises = JSON.parse(data).filter(
-                            (e: any) => e.id.toString() !== id
+                        const remaining = JSON.parse(data).filter(
+                            (w: Workout) => w.id.toString() !== id
                         );
-                        await AsyncStorage.setItem("workouts", JSON.stringify(exercises));
+                        await AsyncStorage.setItem("workouts", JSON.stringify(remaining));
                         router.back();
                     },
                 },
@@ -116,10 +140,18 @@ export default function WorkoutDetailsScreen() {
 
     const renderItem = ({ item }: { item: ExerciseWithSets }) => (
         <View style={styles.exerciseContainer}>
-            <TouchableOpacity style={styles.card} onPress={() => router.push(`/exercise/${item.id}`)}>
+            <TouchableOpacity
+                style={styles.card}
+                onPress={() => router.push(`/exercise/${item.id}`)}
+            >
                 <Image
-                    source={item.image ? { uri: item.image } : require("@/assets/images/favicon.png")}
+                    source={
+                        item.image
+                            ? { uri: item.image }
+                            : require("@/assets/images/favicon.png")
+                    }
                     style={styles.image}
+                    autoplay={false}
                 />
                 <View style={styles.textContainer}>
                     <ThemedText style={styles.name}>{item.name}</ThemedText>
@@ -127,27 +159,60 @@ export default function WorkoutDetailsScreen() {
             </TouchableOpacity>
 
             <View style={styles.setsContainer}>
-                {item.sets.map((set, index) =>
-                    editMode ? (
-                        <TextInput
-                            key={index}
-                            style={styles.input}
-                            placeholder={`Set ${index + 1} reps`}
-                            placeholderTextColor={Colors.dark.text}
-                            keyboardType="number-pad"
-                            value={set.reps}
-                            onChangeText={(text) => updateSet(item.id, index, text)}
-                        />
-                    ) : (
-                        <ThemedText key={index} style={styles.setText}>
-                            Set {index + 1}: {set.reps} reps
-                        </ThemedText>
-                    )
+                <View style={styles.setsHeaderRow}>
+                    <ThemedText style={styles.setsHeaderText}>Set</ThemedText>
+                    <ThemedText style={styles.setsHeaderText}>Reps</ThemedText>
+                </View>
+
+                {editMode ? (
+                    item.sets.map((set, index) => (
+                        <View key={index} style={styles.editRow}>
+                            <ThemedText style={styles.setNumberText}>{index + 1}</ThemedText>
+                            <TextInput
+                                style={styles.repsInput}
+                                placeholder="Reps"
+                                placeholderTextColor={Colors.dark.text}
+                                keyboardType="number-pad"
+                                value={set.reps}
+                                onChangeText={text => updateSet(item.id, index, text)}
+                            />
+                        </View>
+                    ))
+                ) : (
+                    <View style={styles.setsDataRow}>
+                        <View style={styles.setNumbers}>
+                            {item.sets.map((_, index) => (
+                                <ThemedText key={index} style={styles.setNumberText}>
+                                    {index + 1}
+                                </ThemedText>
+                            ))}
+                        </View>
+                        <View style={styles.repsValues}>
+                            {item.sets.map((set, index) => (
+                                <ThemedText key={index} style={styles.repsValueText}>
+                                    {set.reps}
+                                </ThemedText>
+                            ))}
+                        </View>
+                    </View>
                 )}
+
                 {editMode && (
-                    <TouchableOpacity style={styles.addSetButton} onPress={() => addSet(item.id)}>
-                        <ThemedText style={styles.addSetButtonText}>+ Add Set</ThemedText>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: "row", marginTop: 8 }}>
+                        <TouchableOpacity
+                            style={[styles.addSetButton, { flex: 1, marginRight: 8 }]}
+                            onPress={() => addSet(item.id)}
+                        >
+                            <ThemedText style={styles.addSetButtonText}>+ Add Set</ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.removeSetButton, { flex: 1 }]}
+                            onPress={() => removeSet(item.id)}
+                        >
+                            <ThemedText style={styles.removeSetButtonText}>- Remove Set</ThemedText>
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
         </View>
@@ -165,27 +230,50 @@ export default function WorkoutDetailsScreen() {
                     <ThemedText type="defaultSemiBold" style={styles.title}>
                         {workout.name}
                     </ThemedText>
-                    <TouchableOpacity onPress={() => setEditMode(!editMode)}>
-                        <ThemedText style={styles.editButton}>{editMode ? "Cancel" : "Edit"}</ThemedText>
-                    </TouchableOpacity>
+
+                    <View style={styles.headerButtons}>
+                        <TouchableOpacity
+                            onPress={() => setEditMode(!editMode)}
+                            style={styles.iconButton}
+                        >
+                            {editMode ? (
+                                <MaterialIcons
+                                    name="edit-off"
+                                    size={24}
+                                    color={Colors.dark.tint}
+                                />
+                            ) : (
+                                <MaterialIcons
+                                    name="edit"
+                                    size={24}
+                                    color={Colors.dark.tint}
+                                />
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={deleteWorkout}
+                            style={styles.iconButton}
+                        >
+                            <MaterialIcons name="delete" size={24} color="#FF4C4C" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <FlatList
-                    data={workout.exercises}
-                    keyExtractor={(item) => item.id.toString()}
+                    data={exercisesWithSets}
+                    keyExtractor={item => item.id}
                     renderItem={renderItem}
                     contentContainerStyle={{ paddingBottom: 24 }}
                 />
 
                 {editMode && (
                     <TouchableOpacity style={styles.saveButton} onPress={saveWorkout}>
-                        <ThemedText style={styles.saveButtonText}>Save Workout</ThemedText>
+                        <ThemedText style={styles.saveButtonText}>
+                            Save Workout
+                        </ThemedText>
                     </TouchableOpacity>
                 )}
-
-                <TouchableOpacity style={styles.deleteButton} onPress={deleteWorkout}>
-                    <ThemedText style={styles.deleteButtonText}>Delete Workout</ThemedText>
-                </TouchableOpacity>
             </SafeAreaView>
         </KeyboardAvoidingView>
     );
@@ -196,11 +284,18 @@ const styles = StyleSheet.create({
         flex: 1, 
         padding: 16 
     },
-    headerRow: { 
-        flexDirection: "row", 
-        justifyContent: "space-between", 
-        alignItems: "center", 
-        marginBottom: 16 
+    headerRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 16,
+    },
+    headerButtons: {
+        flexDirection: "row",
+        gap: 12, // space between icons
+    },
+    iconButton: {
+        padding: 8, // increases touch area
     },
     title: { 
         fontSize: 22, 
@@ -211,35 +306,28 @@ const styles = StyleSheet.create({
         color: Colors.dark.tint 
     },
     exerciseContainer: { 
-        marginBottom: 16 
+        marginBottom: 16,
     },
     card: {
         flexDirection: "row",
         backgroundColor: "rgb(47,47,47)",
         borderRadius: 12,
         overflow: "hidden",
+        height: CARD_HEIGHT, // set the card height here
     },
-    image: { 
-        width: 100, 
-        height: 100, 
-        resizeMode: "cover" 
+    image: {
+        width: IMAGE_WIDTH, // image width
+        height: "100%",     // take full card height
+        resizeMode: "cover",
     },
-    textContainer: { 
-        flex: 1, 
-        padding: 12, 
-        justifyContent: "center" 
+    textContainer: {
+        flex: 1,
+        padding: 12,
+        justifyContent: "center",
     },
     name: { 
         fontSize: 16, 
         color: Colors.dark.text 
-    },
-    setsContainer: { 
-        paddingHorizontal: 12, 
-        marginTop: 8 
-    },
-    setText: { 
-        color: Colors.dark.text, 
-        marginBottom: 4 
     },
     input: {
         borderWidth: 1,
@@ -249,17 +337,6 @@ const styles = StyleSheet.create({
         color: Colors.dark.text,
         marginBottom: 4,
     },
-    addSetButton: {
-        backgroundColor: Colors.dark.tint,
-        padding: 8,
-        borderRadius: 8,
-        alignItems: "center",
-        marginTop: 4,
-    },
-    addSetButtonText: { 
-        color: Colors.dark.background 
-    },
-
     saveButton: {
         backgroundColor: Colors.dark.tint,
         padding: 16,
@@ -282,5 +359,49 @@ const styles = StyleSheet.create({
     deleteButtonText: { 
         color: "#fff", 
         fontSize: 16 
+    },
+    setsContainer: { paddingHorizontal: 12, marginTop: 8 },
+    setsHeaderRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 4,
+    },
+    setsHeaderText: { color: Colors.dark.text, fontWeight: "bold" },
+
+    setsDataRow: { flexDirection: "row", justifyContent: "space-between" },
+    setNumbers: {},
+    repsValues: {},
+    repsValueText: { color: Colors.dark.text, marginBottom: 4 },
+    addSetButton: {
+        backgroundColor: Colors.dark.tint,
+        padding: 8,
+        borderRadius: 8,
+        alignItems: "center",
+    },
+    removeSetButton: {
+        backgroundColor: Colors.dark.background,
+        borderColor: Colors.dark.tint,
+        borderWidth: 1,
+        padding: 8,
+        borderRadius: 8,
+        alignItems: "center",
+    },
+    addSetButtonText: { color: Colors.dark.background },
+    removeSetButtonText: { color: Colors.dark.tint },
+    editRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 4,
+    },
+    setNumberText: { color: Colors.dark.text, width: 30 },
+    repsInput: {
+        borderWidth: 1,
+        borderColor: Colors.dark.tint,
+        borderRadius: 8,
+        padding: 8,
+        color: Colors.dark.text,
+        width: 60, // only under the Reps column
+        textAlign: "center",
     },
 });

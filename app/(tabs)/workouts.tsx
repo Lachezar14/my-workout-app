@@ -10,9 +10,10 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
+import {Workout} from "@/types/workout";
 
 export default function WorkoutsScreen() {
-    const [workouts, setWorkouts] = useState<any[]>([]);
+    const [workouts, setWorkouts] = useState<Workout[]>([]);
     const router = useRouter();
 
     useFocusEffect(

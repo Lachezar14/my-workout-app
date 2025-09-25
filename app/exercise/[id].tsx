@@ -1,21 +1,29 @@
 ﻿import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Alert, TouchableOpacity } from "react-native";
+import {
+    ScrollView,
+    StyleSheet,
+    Alert,
+    TouchableOpacity,
+    TextInput,
+    View,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
+import { Exercise } from "@/types/exercise";
+import * as ImagePicker from "expo-image-picker";
 
 export default function ExerciseDetails() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
-    const [exercise, setExercise] = useState<{
-        id: number;
-        name: string;
-        description: string;
-        image?: string;
-    } | null>(null);
+    const [exercise, setExercise] = useState<Exercise | null>(null);
+    const [editMode, setEditMode] = useState(false);
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [image, setImage] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         const loadExercise = async () => {
@@ -23,7 +31,12 @@ export default function ExerciseDetails() {
             if (!data) return;
             const exercises = JSON.parse(data);
             const found = exercises.find((e: any) => e.id.toString() === id);
-            setExercise(found || null);
+            if (found) {
+                setExercise(found);
+                setTitle(found.name);
+                setDescription(found.description || "");
+                setImage(found.image);
+            }
         };
         loadExercise();
     }, [id]);
@@ -51,9 +64,29 @@ export default function ExerciseDetails() {
         );
     };
 
-    const editExercise = () => {
-        // Navigate to an edit page with the exercise id
-        router.push(`/edit-exercise/${id}`);
+    const saveExercise = async () => {
+        if (!exercise) return;
+        const data = await AsyncStorage.getItem("exercises");
+        if (!data) return;
+        const exercises = JSON.parse(data).map((e: any) =>
+            e.id === exercise.id
+                ? { ...e, name: title, description, image }
+                : e
+        );
+        await AsyncStorage.setItem("exercises", JSON.stringify(exercises));
+        setExercise({ ...exercise, name: title, description, image });
+        setEditMode(false);
+    };
+
+    const pickImage = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.7,
+        });
+        if (!result.canceled) {
+            setImage(result.assets[0].uri);
+        }
     };
 
     if (!exercise) {
@@ -66,29 +99,76 @@ export default function ExerciseDetails() {
 
     return (
         <ThemedView style={styles.container}>
-            {exercise.image && (
-                <Image 
-                    source={exercise.image} 
-                    style={styles.image} 
-                    contentFit="cover"
-                />
-            )}
-            <ThemedText type="title" style={styles.title}>
-                {exercise.name}
-            </ThemedText>
-            <ScrollView style={{ marginTop: 16 }}>
-                <ThemedText>
-                    {exercise.description || "No description provided."}
+            <TouchableOpacity onPress={editMode ? pickImage : undefined}>
+                {image && (
+                    <Image
+                        source={image}
+                        style={styles.image}
+                        contentFit="cover"
+                    />
+                )}
+                {editMode && (
+                    <View style={styles.imageOverlay}>
+                        <ThemedText style={styles.overlayText}>Update Image</ThemedText>
+                    </View>
+                )}
+            </TouchableOpacity>
+
+            {editMode ? (
+                <>
+                    <ThemedText style={styles.label}>Title</ThemedText>
+                    <TextInput
+                        style={styles.inputTitle}
+                        value={title}
+                        onChangeText={setTitle}
+                        placeholder="Exercise title"
+                        placeholderTextColor="#888"
+                    />
+                </>
+            ) : (
+                <ThemedText type="title" style={styles.title}>
+                    {exercise.name}
                 </ThemedText>
+            )}
+
+            <ScrollView style={{ marginTop: 16 }}>
+                {editMode ? (
+                    <>
+                        <ThemedText style={styles.label}>Description</ThemedText>
+                        <TextInput
+                            style={styles.inputDescription}
+                            value={description}
+                            onChangeText={setDescription}
+                            placeholder="Exercise description"
+                            placeholderTextColor="#888"
+                            multiline
+                        />
+                    </>
+                ) : (
+                    <ThemedText>
+                        {exercise.description || "No description provided."}
+                    </ThemedText>
+                )}
             </ScrollView>
 
-            <TouchableOpacity style={styles.editButton} onPress={editExercise}>
-                <ThemedText style={styles.buttonText}>Edit</ThemedText>
-            </TouchableOpacity>
+            {editMode ? (
+                <>
+                    <TouchableOpacity style={styles.editButton} onPress={saveExercise}>
+                        <ThemedText style={styles.buttonText}>Save</ThemedText>
+                    </TouchableOpacity>
 
-            <TouchableOpacity style={styles.deleteButton} onPress={deleteExercise}>
-                <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
-            </TouchableOpacity>
+                    <TouchableOpacity style={styles.deleteButton} onPress={deleteExercise}>
+                        <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
+                    </TouchableOpacity>
+                </>
+            ) : (
+                <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => setEditMode(true)}
+                >
+                    <ThemedText style={styles.buttonText}>Edit</ThemedText>
+                </TouchableOpacity>
+            )}
         </ThemedView>
     );
 }
@@ -104,8 +184,47 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         marginBottom: 16,
     },
+    imageOverlay: {
+        position: "absolute",
+        top: 100,
+        left: 50,
+        right: 50,
+        bottom: 100,
+        borderRadius: 8,
+        backgroundColor: "rgba(0,0,0,0.4)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    overlayText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "600",
+    },
     title: {
         marginBottom: 8,
+    },
+    label: {
+        fontSize: 14,
+        color: "#aaa",
+        marginBottom: 4,
+    },
+    inputTitle: {
+        fontSize: 22,
+        fontWeight: "600",
+        marginBottom: 8,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 8,
+        backgroundColor: "rgb(47,47,47)",
+        color: "#fff",
+    },
+    inputDescription: {
+        fontSize: 16,
+        borderRadius: 8,
+        padding: 8,
+        minHeight: 100,
+        backgroundColor: "rgb(47,47,47)",
+        color: "#fff",
     },
     editButton: {
         backgroundColor: Colors.dark.tint,
@@ -126,7 +245,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     deleteButtonText: {
-        color: "fff",
+        color: "#fff",
         fontSize: 16,
     },
 });

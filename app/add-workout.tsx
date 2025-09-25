@@ -5,16 +5,24 @@ import {
     TouchableOpacity,
     View,
     TextInput,
+    Image,
+    Dimensions,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
+import { Workout } from "@/types/workout";
+import { Exercise } from "@/types/exercise";
+
+const { width } = Dimensions.get("window");
+const CARD_HEIGHT = 80;
+const IMAGE_WIDTH = 100;
 
 export default function AddWorkout() {
-    const [exercises, setExercises] = useState<any[]>([]);
-    const [selected, setSelected] = useState<any[]>([]);
+    const [exercises, setExercises] = useState<Exercise[]>([]);
+    const [selected, setSelected] = useState<Exercise[]>([]);
     const [name, setName] = useState("");
     const router = useRouter();
 
@@ -26,7 +34,7 @@ export default function AddWorkout() {
         loadExercises();
     }, []);
 
-    const toggleSelect = (exercise: any) => {
+    const toggleSelect = (exercise: Exercise) => {
         if (selected.some((e) => e.id === exercise.id)) {
             setSelected((prev) => prev.filter((e) => e.id !== exercise.id));
         } else {
@@ -35,10 +43,13 @@ export default function AddWorkout() {
     };
 
     const saveWorkout = async () => {
-        const newWorkout = {
-            id: Date.now(),
+        const newWorkout: Workout = {
+            id: Date.now().toString(),
             name: name || "Untitled Workout",
-            exercises: selected,
+            exercises: selected.map((ex) => ({
+                exerciseId: ex.id,
+                sets: [],
+            })),
         };
 
         const existing = await AsyncStorage.getItem("workouts");
@@ -48,35 +59,64 @@ export default function AddWorkout() {
         router.back();
     };
 
+    const renderItem = ({ item }: { item: Exercise }) => {
+        const isSelected = selected.some((e) => e.id === item.id);
+        return (
+            <TouchableOpacity
+                style={styles.card}
+                onPress={() => toggleSelect(item)}
+            >
+                <Image
+                    source={
+                        item.image
+                            ? { uri: item.image }
+                            : require("@/assets/images/favicon.png")
+                    }
+                    style={styles.cardImage}
+                />
+                <View style={styles.cardTextContainer}>
+                    <ThemedText type="defaultSemiBold" style={styles.cardTitle}>
+                        {item.name}
+                    </ThemedText>
+                </View>
+                {isSelected && <View style={styles.selectionIndicator} />}
+            </TouchableOpacity>
+        );
+    };
+
     return (
         <SafeAreaView style={styles.safeArea}>
-            <TextInput
-                placeholder="Workout name"
-                placeholderTextColor={Colors.dark.text}
-                value={name}
-                onChangeText={setName}
-                style={styles.input}
-            />
+            {/* Header + input stay fixed above the list */}
+            <View style={styles.header}>
+                <ThemedText type="title" style={styles.label}>
+                    Name
+                </ThemedText>
+                <TextInput
+                    placeholder="Workout name"
+                    placeholderTextColor={Colors.dark.tabIconDefault}
+                    value={name}
+                    onChangeText={setName}
+                    style={styles.input}
+                />
+            </View>
 
+            {/* Exercises scrollable list */}
             <FlatList
                 data={exercises}
                 keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                    <TouchableOpacity
-                        style={[
-                            styles.card,
-                            selected.some((e) => e.id === item.id) && styles.selectedCard,
-                        ]}
-                        onPress={() => toggleSelect(item)}
-                    >
-                        <ThemedText style={styles.cardTitle}>{item.name}</ThemedText>
-                    </TouchableOpacity>
-                )}
+                renderItem={renderItem}
+                contentContainerStyle={styles.listContent}
+                style={styles.list}
             />
 
-            <TouchableOpacity style={styles.saveButton} onPress={saveWorkout}>
-                <ThemedText style={styles.saveButtonText}>Save Workout</ThemedText>
-            </TouchableOpacity>
+            {/* Save button pinned to bottom */}
+            {selected.length > 0 && (
+                <TouchableOpacity style={styles.saveButton} onPress={saveWorkout}>
+                    <ThemedText style={styles.saveButtonText}>
+                        Save Workout
+                    </ThemedText>
+                </TouchableOpacity>
+            )}
         </SafeAreaView>
     );
 }
@@ -85,35 +125,72 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: Colors.dark.background,
-        padding: 16,
+    },
+    header: {
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+    },
+    label: {
+        marginBottom: 8,
+        color: Colors.dark.text,
     },
     input: {
-        borderWidth: 1,
-        borderColor: Colors.dark.tint,
-        borderRadius: 8,
+        backgroundColor: Colors.dark.tabIconDefault,
         padding: 12,
+        borderRadius: 12,
         color: Colors.dark.text,
-        marginBottom: 16,
+    },
+    list: {
+        flex: 1,
+    },
+    listContent: {
+        paddingHorizontal: 16,
+        paddingBottom: 100, // prevent last card from being hidden by save button
     },
     card: {
-        padding: 12,
-        borderRadius: 8,
-        backgroundColor: Colors.dark.tabIconDefault,
-        marginBottom: 8,
+        flexDirection: "row",
+        marginBottom: 16,
+        borderRadius: 16,
+        overflow: "hidden",
+        backgroundColor: "rgb(47,47,47)",
+        elevation: 3,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        height: CARD_HEIGHT,
+        position: "relative",
     },
-    selectedCard: {
-        backgroundColor: Colors.dark.tint,
+    cardImage: {
+        width: IMAGE_WIDTH,
+        height: "100%",
+        resizeMode: "cover",
+    },
+    cardTextContainer: {
+        flex: 1,
+        justifyContent: "center",
+        paddingHorizontal: 12,
     },
     cardTitle: {
-        color: Colors.dark.text,
         fontSize: 16,
+        color: "#fff",
+    },
+    selectionIndicator: {
+        position: "absolute",
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: 4,
+        backgroundColor: "white",
+        borderTopRightRadius: 16,
+        borderBottomRightRadius: 16,
     },
     saveButton: {
         backgroundColor: Colors.dark.tint,
-        padding: 16,
+        margin: 16,
+        paddingVertical: 12,
         borderRadius: 12,
         alignItems: "center",
-        marginTop: 16,
     },
     saveButtonText: {
         color: Colors.dark.background,

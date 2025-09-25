@@ -13,13 +13,14 @@ import { Image } from "expo-image";
 
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
+import {Exercise} from "@/types/exercise";
 
 const { width } = Dimensions.get("window");
-const CARD_HEIGHT = 80;               // card height
-const IMAGE_WIDTH = width * 0.25;       // image takes 30% of card width
+const CARD_HEIGHT = 80; // card height
+const IMAGE_WIDTH = width * 0.25; // image takes 25% of card width
 
 export default function ExercisesScreen() {
-    const [exercises, setExercises] = useState<any[]>([]);
+    const [exercises, setExercises] = useState<Exercise[]>([]);
     const router = useRouter();
 
     useFocusEffect(
@@ -32,7 +33,7 @@ export default function ExercisesScreen() {
         }, [])
     );
 
-    const renderItem = ({ item }: { item: any }) => (
+    const renderItem = ({ item }: { item: Exercise }) => (
         <TouchableOpacity
             style={styles.card}
             onPress={() => router.push(`/exercise/${item.id}`)}
