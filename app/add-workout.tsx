@@ -16,6 +16,7 @@ import { Colors } from "@/constants/theme";
 import { Workout } from "@/types/workout";
 import { Exercise } from "@/types/exercise";
 import {saveWorkout} from "@/repository/workoutRepository";
+import {HeaderDefault} from "@/components/header/headerDefault";
 
 const { width } = Dimensions.get("window");
 const CARD_HEIGHT = 80;
@@ -92,8 +93,8 @@ export default function AddWorkout() {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            {/* Header + input stay fixed above the list */}
             <View style={styles.header}>
+                <HeaderDefault title={"Add Workout"} />
                 <ThemedText type="title" style={styles.label}>
                     Name
                 </ThemedText>
@@ -133,8 +134,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.dark.background,
     },
     header: {
-        paddingHorizontal: 16,
-        paddingBottom: 16,
+        padding: 16,
     },
     label: {
         marginBottom: 8,

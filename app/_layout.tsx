@@ -25,8 +25,8 @@ export default function RootLayout() {
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen name="exercise" options={{ headerShown: false }} />
                   <Stack.Screen name="workout" options={{ headerShown: false }} />
-                  <Stack.Screen name="add-exercise" options={{ title: 'Add Exercise' }} />
-                    <Stack.Screen name="add-workout" options={{ title: 'Add Workout' }} />
+                  <Stack.Screen name="add-exercise" options={{ headerShown: false }} />
+                    <Stack.Screen name="add-workout" options={{ headerShown:false }} />
                   <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
               </Stack>
               <StatusBar style="auto" />

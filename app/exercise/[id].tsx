@@ -16,6 +16,9 @@ import { Exercise } from "@/types/exercise";
 import * as ImagePicker from "expo-image-picker";
 import {deleteExercise, getExerciseById, updateExercise} from "@/repository/exercisesRepository";
 import {useModal} from "@/context/ModalContext";
+import {MaterialCommunityIcons} from "@expo/vector-icons";
+import {SafeAreaView} from "react-native-safe-area-context";
+import {HeaderDefault} from "@/components/header/headerDefault";
 
 export default function ExerciseDetails() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -100,7 +103,8 @@ export default function ExerciseDetails() {
     }
 
     return (
-        <ThemedView style={styles.container}>
+        <SafeAreaView style={styles.container}>
+            <HeaderDefault title={"Exercise Details"} />
             <TouchableOpacity onPress={editMode ? pickImage : undefined}>
                 {image && (
                     <Image
@@ -171,13 +175,14 @@ export default function ExerciseDetails() {
                     <ThemedText style={styles.buttonText}>Edit</ThemedText>
                 </TouchableOpacity>
             )}
-        </ThemedView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: Colors.dark.background,
         padding: 16,
     },
     image: {

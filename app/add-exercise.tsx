@@ -6,6 +6,8 @@ import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import {saveExercise} from "@/repository/exercisesRepository";
 import {Exercise} from "@/types/exercise";
+import {HeaderDefault} from "@/components/header/headerDefault";
+import {SafeAreaView} from "react-native-safe-area-context";
 
 export default function AddExercise() {
     const [name, setName] = useState("");
@@ -44,47 +46,51 @@ export default function AddExercise() {
     };
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <ThemedText type="title" style={styles.label}>
-                Name
-            </ThemedText>
-            <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Exercise name"
-                style={styles.input}
-                placeholderTextColor={Colors.dark.icon}
-            />
-
-            <ThemedText type="title" style={styles.label}>
-                Description
-            </ThemedText>
-            <TextInput
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Exercise description"
-                style={[styles.input, { height: 100 }]}
-                placeholderTextColor={Colors.dark.icon}
-                multiline
-            />
-
-            <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-                <ThemedText style={styles.imageButtonText}>
-                    {imageUri ? "Change Image/GIF" : "Add Image/GIF"}
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView>
+                <HeaderDefault title={"Add Exercise"} />
+                <ThemedText type="title" style={styles.label}>
+                    Name
                 </ThemedText>
-            </TouchableOpacity>
-
-            {imageUri && <Image source={{ uri: imageUri }} style={styles.preview} />}
-
-            <TouchableOpacity style={styles.saveButton} onPress={handleSaveExercise}>
-                <ThemedText style={styles.saveButtonText}>Save Exercise</ThemedText>
-            </TouchableOpacity>
-        </ScrollView>
+                <TextInput
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Exercise name"
+                    style={styles.input}
+                    placeholderTextColor={Colors.dark.icon}
+                />
+    
+                <ThemedText type="title" style={styles.label}>
+                    Description
+                </ThemedText>
+                <TextInput
+                    value={description}
+                    onChangeText={setDescription}
+                    placeholder="Exercise description"
+                    style={[styles.input, { height: 100 }]}
+                    placeholderTextColor={Colors.dark.icon}
+                    multiline
+                />
+    
+                <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+                    <ThemedText style={styles.imageButtonText}>
+                        {imageUri ? "Change Image/GIF" : "Add Image/GIF"}
+                    </ThemedText>
+                </TouchableOpacity>
+    
+                {imageUri && <Image source={{ uri: imageUri }} style={styles.preview} />}
+    
+                <TouchableOpacity style={styles.saveButton} onPress={handleSaveExercise}>
+                    <ThemedText style={styles.saveButtonText}>Save Exercise</ThemedText>
+                </TouchableOpacity>
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    safeArea: {
+        flex: 1,
         padding: 16,
         backgroundColor: Colors.dark.background,
     },

@@ -136,6 +136,7 @@ export default function WorkoutDetailsScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 80}
         >
+            <SafeAreaView>
                 {/* Scrollable content */}
                 <ScrollView
                     contentContainerStyle={{ padding: 16, paddingBottom: 120 }} // leave space for Save button
@@ -143,10 +144,15 @@ export default function WorkoutDetailsScreen() {
                 >
                     {/* Header */}
                     <View style={styles.headerRow}>
+                        {/* Back button */}
+                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                            <MaterialCommunityIcons name="chevron-left" size={24} color={Colors.dark.tint} />
+                        </TouchableOpacity>
+                        
                         <ThemedText type="defaultSemiBold" style={styles.title}>
                             {workout.name}
                         </ThemedText>
-
+                        
                         <View style={styles.headerButtons}>
                             <TouchableOpacity onPress={handleEditMode} style={styles.textButton}>
                                 {editMode ? (
@@ -192,6 +198,7 @@ export default function WorkoutDetailsScreen() {
                         <ThemedText style={styles.saveButtonText}>Save Workout</ThemedText>
                     </TouchableOpacity>
                 )}*/}
+            </SafeAreaView>
         </KeyboardAvoidingView>
     );
 }
@@ -204,17 +211,21 @@ const styles = StyleSheet.create({
     },
     headerRow: {
         flexDirection: "row",
-        justifyContent: "space-between",
         alignItems: "center",
+        justifyContent: "space-between",
         marginBottom: 16,
+    },
+    backButton: {
+        padding: 4,
+    },
+    title: {
+        fontSize: 22,
+        textAlign: "center",
+        color: Colors.dark.text,
     },
     headerButtons: {
         flexDirection: "row",
         gap: 12,
-    },
-    title: { 
-        fontSize: 22, 
-        color: Colors.dark.text 
     },
     textButton: {
         flexDirection: "row",

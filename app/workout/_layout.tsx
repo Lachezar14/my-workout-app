@@ -10,6 +10,7 @@ export default function WorkoutLayout() {
                 name="[id]"
                 options={{
                     headerTitle: 'Workout Details',
+                    headerShown: false,
                 }}
             />
         </Stack>
