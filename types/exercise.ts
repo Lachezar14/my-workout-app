@@ -1,5 +1,6 @@
 ﻿export type Set = {
     reps: string;
+    kgs; string;
 };
 
 export type ExerciseWithSets = {

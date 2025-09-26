@@ -1,24 +1,22 @@
-﻿import {useState, useCallback} from "react";
+﻿import {useState, useCallback, useEffect} from "react";
 import {
-    FlatList,
     StyleSheet,
     View,
-    TextInput,
     KeyboardAvoidingView,
     Platform,
     Alert,
-    TouchableOpacity,
+    TouchableOpacity, ScrollView, Keyboard,
 } from "react-native";
 import {useFocusEffect, useLocalSearchParams, useRouter} from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
-import { Image } from "expo-image";
 import { Workout } from "@/types/workout";
 import { ExerciseWithSets } from "@/types/exercise";
-import { MaterialIcons } from "@expo/vector-icons";
+import {MaterialCommunityIcons, MaterialIcons} from "@expo/vector-icons";
 import {deleteWorkout, getWorkoutById, updateWorkoutExercises} from "@/repository/workoutRepository";
 import {getExercises} from "@/repository/exercisesRepository";
+import {ExerciseCard} from "@/components/exercise/exerciseCard";
 
 const CARD_HEIGHT = 80; // total height of the card
 const IMAGE_WIDTH = 100; // can be smaller or bigger than CARD_HEIGHT
@@ -29,6 +27,18 @@ export default function WorkoutDetailsScreen() {
     const [exercisesWithSets, setExercisesWithSets] = useState<ExerciseWithSets[]>([]);
     const [editMode, setEditMode] = useState(false);
     const router = useRouter();
+    
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+    useEffect(() => {
+        const showListener = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true));
+        const hideListener = Keyboard.addListener("keyboardDidHide", () => setKeyboardVisible(false));
+
+        return () => {
+            showListener.remove();
+            hideListener.remove();
+        };
+    }, []);
 
     // Load workout & exercises
     useFocusEffect(
@@ -54,25 +64,39 @@ export default function WorkoutDetailsScreen() {
             loadWorkout();
         }, [id])
     );
+    
+    const handleEditMode = () => {
+        if (editMode) {
+            handleUpdateWorkout();
+        }
+        setEditMode(!editMode);
+    }
 
-    const updateSet = (exerciseId: string, setIndex: number, reps: string) => {
-        setExercisesWithSets(prev =>
-            prev.map(ex =>
+    const updateSet = (exerciseId: string, setIndex: number, field: "reps" | "kgs", value: string) => {
+        setExercisesWithSets((prev) =>
+            prev.map((ex) =>
                 ex.id === exerciseId
-                    ? { ...ex, sets: ex.sets.map((s, i) => (i === setIndex ? { reps } : s)) }
+                    ? {
+                        ...ex,
+                        sets: ex.sets.map((s, i) =>
+                            i === setIndex ? { ...s, [field]: value } : s
+                        ),
+                    }
                     : ex
             )
         );
     };
 
     const addSet = (exerciseId: string) => {
-        setExercisesWithSets(prev =>
-            prev.map(ex =>
-                ex.id === exerciseId ? { ...ex, sets: [...ex.sets, { reps: "" }] } : ex
+        setExercisesWithSets((prev) =>
+            prev.map((ex) =>
+                ex.id === exerciseId
+                    ? { ...ex, sets: [...ex.sets, { reps: "", kgs: "" }] }
+                    : ex
             )
         );
     };
-
+    
     const removeSet = (exerciseId: string) => {
         setExercisesWithSets(prev =>
             prev.map(ex =>
@@ -86,11 +110,9 @@ export default function WorkoutDetailsScreen() {
         if (!workout) return;
         try {
             await updateWorkoutExercises(workout.id, exercisesWithSets);
-            Alert.alert("Saved", "Workout updated successfully");
             setEditMode(false);
         } catch (error) {
             console.error("Failed to save workout:", error);
-            Alert.alert("Error", "Failed to save workout");
         }
     };
 
@@ -117,143 +139,63 @@ export default function WorkoutDetailsScreen() {
             ]
         );
     };
-
-    const renderItem = ({ item }: { item: ExerciseWithSets }) => (
-        <View style={styles.exerciseContainer}>
-            <TouchableOpacity
-                style={styles.card}
-                onPress={() => router.push(`/exercise/${item.id}`)}
-            >
-                <Image
-                    source={
-                        item.image
-                            ? { uri: item.image }
-                            : require("@/assets/images/favicon.png")
-                    }
-                    style={styles.image}
-                    autoplay={false}
-                />
-                <View style={styles.textContainer}>
-                    <ThemedText style={styles.name}>{item.name}</ThemedText>
-                </View>
-            </TouchableOpacity>
-
-            <View style={styles.setsContainer}>
-                <View style={styles.setsHeaderRow}>
-                    <ThemedText style={styles.setsHeaderText}>Set</ThemedText>
-                    <ThemedText style={styles.setsHeaderText}>Reps</ThemedText>
-                </View>
-
-                {editMode ? (
-                    item.sets.map((set, index) => (
-                        <View key={index} style={styles.editRow}>
-                            <ThemedText style={styles.setNumberText}>{index + 1}</ThemedText>
-                            <TextInput
-                                style={styles.repsInput}
-                                placeholder="Reps"
-                                placeholderTextColor={Colors.dark.text}
-                                keyboardType="number-pad"
-                                value={set.reps}
-                                onChangeText={text => updateSet(item.id, index, text)}
-                            />
-                        </View>
-                    ))
-                ) : (
-                    <View style={styles.setsDataRow}>
-                        <View style={styles.setNumbers}>
-                            {item.sets.map((_, index) => (
-                                <ThemedText key={index} style={styles.setNumberText}>
-                                    {index + 1}
-                                </ThemedText>
-                            ))}
-                        </View>
-                        <View style={styles.repsValues}>
-                            {item.sets.map((set, index) => (
-                                <ThemedText key={index} style={styles.repsValueText}>
-                                    {set.reps}
-                                </ThemedText>
-                            ))}
-                        </View>
-                    </View>
-                )}
-
-                {editMode && (
-                    <View style={{ flexDirection: "row", marginTop: 8 }}>
-                        <TouchableOpacity
-                            style={[styles.addSetButton, { flex: 1, marginRight: 8 }]}
-                            onPress={() => addSet(item.id)}
-                        >
-                            <ThemedText style={styles.addSetButtonText}>+ Add Set</ThemedText>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.removeSetButton, { flex: 1 }]}
-                            onPress={() => removeSet(item.id)}
-                        >
-                            <ThemedText style={styles.removeSetButtonText}>- Remove Set</ThemedText>
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </View>
-        </View>
-    );
-
+    
     if (!workout) return null;
 
     return (
         <KeyboardAvoidingView
             style={{ flex: 1, backgroundColor: Colors.dark.background }}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 80}
         >
-            <SafeAreaView style={styles.safeArea}>
-                <View style={styles.headerRow}>
-                    <ThemedText type="defaultSemiBold" style={styles.title}>
-                        {workout.name}
-                    </ThemedText>
+            <SafeAreaView style={{ flex: 1 }}>
 
-                    <View style={styles.headerButtons}>
-                        <TouchableOpacity
-                            onPress={() => setEditMode(!editMode)}
-                            style={styles.iconButton}
-                        >
-                            {editMode ? (
-                                <MaterialIcons
-                                    name="edit-off"
-                                    size={24}
-                                    color={Colors.dark.tint}
-                                />
-                            ) : (
-                                <MaterialIcons
-                                    name="edit"
-                                    size={24}
-                                    color={Colors.dark.tint}
-                                />
-                            )}
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            onPress={handleDeleteWorkout}
-                            style={styles.iconButton}
-                        >
-                            <MaterialIcons name="delete" size={24} color="#FF4C4C" />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                <FlatList
-                    data={exercisesWithSets}
-                    keyExtractor={item => item.id}
-                    renderItem={renderItem}
-                    contentContainerStyle={{ paddingBottom: 24 }}
-                />
-
-                {editMode && (
-                    <TouchableOpacity style={styles.saveButton} onPress={handleUpdateWorkout}>
-                        <ThemedText style={styles.saveButtonText}>
-                            Save Workout
+                {/* Scrollable content */}
+                <ScrollView
+                    contentContainerStyle={{ padding: 16, paddingBottom: 120 }} // leave space for Save button
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {/* Header */}
+                    <View style={styles.headerRow}>
+                        <ThemedText type="defaultSemiBold" style={styles.title}>
+                            {workout.name}
                         </ThemedText>
+
+                        <View style={styles.headerButtons}>
+                            <TouchableOpacity onPress={() => handleEditMode()} style={styles.iconButton}>
+                                {editMode ? (
+                                    <MaterialCommunityIcons name="checkbox-marked-circle-outline" size={24} color={Colors.dark.tint} />
+                                ) : (
+                                    <MaterialIcons name="edit" size={24} color={Colors.dark.tint} />
+                                )}
+                            </TouchableOpacity>
+
+                            <TouchableOpacity onPress={handleDeleteWorkout} style={styles.iconButton}>
+                                <MaterialCommunityIcons name="delete" size={24} color="#FF4C4C" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* Exercises */}
+                    {exercisesWithSets.map(item => (
+                        <ExerciseCard
+                            key={item.id}
+                            item={item}
+                            editMode={editMode}
+                            updateSet={updateSet}
+                            addSet={addSet}
+                            removeSet={removeSet}
+                            onPress={() => router.push(`/exercise/${item.id}`)}
+                        />
+                    ))}
+                </ScrollView>
+
+                {/* Save button fixed at bottom */}
+                {/*{editMode && !keyboardVisible && (
+                    <TouchableOpacity style={styles.saveButtonBottom} onPress={handleUpdateWorkout}>
+                        <ThemedText style={styles.saveButtonText}>Save Workout</ThemedText>
                     </TouchableOpacity>
-                )}
+                )}*/}
             </SafeAreaView>
         </KeyboardAvoidingView>
     );
@@ -261,7 +203,8 @@ export default function WorkoutDetailsScreen() {
 
 const styles = StyleSheet.create({
     safeArea: { 
-        flex: 1, 
+        flex: 1,
+        backgroundColor: Colors.dark.background,
         padding: 16 
     },
     headerRow: {
@@ -317,13 +260,6 @@ const styles = StyleSheet.create({
         color: Colors.dark.text,
         marginBottom: 4,
     },
-    saveButton: {
-        backgroundColor: Colors.dark.tint,
-        padding: 16,
-        borderRadius: 12,
-        alignItems: "center",
-        marginTop: 16,
-    },
     saveButtonText: { 
         color: Colors.dark.background, 
         fontSize: 16 
@@ -339,66 +275,15 @@ const styles = StyleSheet.create({
         color: "#fff", 
         fontSize: 16 
     },
-    setsContainer: { 
-        paddingHorizontal: 12, 
-        marginTop: 8 
-    },
-    setsHeaderRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: 4,
-    },
-    setsHeaderText: { 
-        color: Colors.dark.text, 
-        fontWeight: "bold"
-    },
-    setsDataRow: { 
-        flexDirection: "row", 
-        justifyContent: "space-between" 
-    },
-    setNumbers: {},
-    repsValues: {},
-    repsValueText: { 
-        color: Colors.dark.text, 
-        marginBottom: 4 
-    },
-    addSetButton: {
+    saveButtonBottom: {
+        position: 'absolute',
+        bottom: 16,
+        left: 16,
+        right: 16,
         backgroundColor: Colors.dark.tint,
-        padding: 8,
-        borderRadius: 8,
-        alignItems: "center",
-    },
-    removeSetButton: {
-        backgroundColor: Colors.dark.background,
-        borderColor: Colors.dark.tint,
-        borderWidth: 1,
-        padding: 8,
-        borderRadius: 8,
-        alignItems: "center",
-    },
-    addSetButtonText: { 
-        color: Colors.dark.background 
-    },
-    removeSetButtonText: { 
-        color: Colors.dark.tint 
-    },
-    editRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 4,
-    },
-    setNumberText: { 
-        color: Colors.dark.text, 
-        width: 30 
-    },
-    repsInput: {
-        borderWidth: 1,
-        borderColor: Colors.dark.tint,
-        borderRadius: 8,
-        padding: 8,
-        color: Colors.dark.text,
-        width: 60, // only under the Reps column
-        textAlign: "center",
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        zIndex: 10,
     },
 });
