@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     setsToggleText: {
         color: Colors.dark.text,
         fontWeight: "600",
-        fontSize: 14,
+        fontSize: 15,
     },
     setsContainer: {
         padding: 12,
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
     setsHeaderText: {
-        fontSize: 13,
+        fontSize: 15,
         fontWeight: "600",
         color: Colors.dark.text,
     },

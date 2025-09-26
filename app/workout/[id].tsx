@@ -1,11 +1,11 @@
-﻿import {useState, useCallback, useEffect} from "react";
+﻿import {useState, useCallback} from "react";
 import {
     StyleSheet,
     View,
     KeyboardAvoidingView,
     Platform,
     Alert,
-    TouchableOpacity, ScrollView, Keyboard,
+    TouchableOpacity, ScrollView,
 } from "react-native";
 import {useFocusEffect, useLocalSearchParams, useRouter} from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -27,18 +27,6 @@ export default function WorkoutDetailsScreen() {
     const [exercisesWithSets, setExercisesWithSets] = useState<ExerciseWithSets[]>([]);
     const [editMode, setEditMode] = useState(false);
     const router = useRouter();
-    
-    const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-    useEffect(() => {
-        const showListener = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true));
-        const hideListener = Keyboard.addListener("keyboardDidHide", () => setKeyboardVisible(false));
-
-        return () => {
-            showListener.remove();
-            hideListener.remove();
-        };
-    }, []);
 
     // Load workout & exercises
     useFocusEffect(
@@ -148,8 +136,6 @@ export default function WorkoutDetailsScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 80}
         >
-            <SafeAreaView style={{ flex: 1 }}>
-
                 {/* Scrollable content */}
                 <ScrollView
                     contentContainerStyle={{ padding: 16, paddingBottom: 120 }} // leave space for Save button
@@ -162,16 +148,26 @@ export default function WorkoutDetailsScreen() {
                         </ThemedText>
 
                         <View style={styles.headerButtons}>
-                            <TouchableOpacity onPress={() => handleEditMode()} style={styles.iconButton}>
+                            <TouchableOpacity onPress={handleEditMode} style={styles.textButton}>
                                 {editMode ? (
-                                    <MaterialCommunityIcons name="checkbox-marked-circle-outline" size={24} color={Colors.dark.tint} />
+                                    <MaterialCommunityIcons
+                                        name="checkbox-marked-circle-outline"
+                                        size={20}
+                                        color={Colors.dark.tint}
+                                    />
                                 ) : (
-                                    <MaterialIcons name="edit" size={24} color={Colors.dark.tint} />
+                                    <MaterialIcons name="edit" size={20} color={Colors.dark.tint} />
                                 )}
+                                <ThemedText style={styles.buttonText}>
+                                    {editMode ? "Save" : "Edit"}
+                                </ThemedText>
                             </TouchableOpacity>
 
-                            <TouchableOpacity onPress={handleDeleteWorkout} style={styles.iconButton}>
-                                <MaterialCommunityIcons name="delete" size={24} color="#FF4C4C" />
+                            <TouchableOpacity onPress={handleDeleteWorkout} style={styles.textButton}>
+                                <MaterialCommunityIcons name="delete" size={20} color="#FF4C4C" />
+                                <ThemedText style={[styles.buttonText, { color: "#FF4C4C" }]}>
+                                    Delete
+                                </ThemedText>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -196,7 +192,6 @@ export default function WorkoutDetailsScreen() {
                         <ThemedText style={styles.saveButtonText}>Save Workout</ThemedText>
                     </TouchableOpacity>
                 )}*/}
-            </SafeAreaView>
         </KeyboardAvoidingView>
     );
 }
@@ -217,16 +212,21 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         gap: 12,
     },
-    iconButton: {
-        padding: 8,
-    },
     title: { 
         fontSize: 22, 
         color: Colors.dark.text 
     },
-    editButton: { 
-        fontSize: 16, 
-        color: Colors.dark.tint 
+    textButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 4,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    buttonText: {
+        marginLeft: 6,
+        fontSize: 14,
+        color: Colors.dark.tint,
     },
     exerciseContainer: { 
         marginBottom: 16,

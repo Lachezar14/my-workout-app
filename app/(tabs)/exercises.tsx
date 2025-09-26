@@ -110,15 +110,15 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 4,
-        height: CARD_HEIGHT,                 // fixed height for card
+        height: CARD_HEIGHT,
     },
     cardImage: {
         width: IMAGE_WIDTH,
-        height: "100%",                      // image fills card height
+        height: "100%",
         resizeMode: "cover",
     },
     cardTextContainer: {
-        flex: 1,                             // take remaining horizontal space
+        flex: 1,
         justifyContent: "center",
         paddingHorizontal: 12,
     },

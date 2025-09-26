@@ -15,6 +15,7 @@ import { Colors } from "@/constants/theme";
 import { Exercise } from "@/types/exercise";
 import * as ImagePicker from "expo-image-picker";
 import {deleteExercise, getExerciseById, updateExercise} from "@/repository/exercisesRepository";
+import {useModal} from "@/context/ModalContext";
 
 export default function ExerciseDetails() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,6 +25,10 @@ export default function ExerciseDetails() {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [image, setImage] = useState<string | undefined>(undefined);
+    const { modal } = useLocalSearchParams<{ modal?: string }>();
+
+    const { isVisible, closeModal } = useModal();
+
 
     useEffect(() => {
         const loadExercise = async () => {

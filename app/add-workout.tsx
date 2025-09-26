@@ -65,7 +65,10 @@ export default function AddWorkout() {
         const isSelected = selected.some((e) => e.id === item.id);
         return (
             <TouchableOpacity
-                style={styles.card}
+                style={[
+                    styles.card,
+                    { borderWidth: isSelected ? 2 : 0, borderColor: Colors.dark.tint },
+                ]}
                 onPress={() => toggleSelect(item)}
             >
                 <Image
@@ -81,10 +84,11 @@ export default function AddWorkout() {
                         {item.name}
                     </ThemedText>
                 </View>
-                {isSelected && <View style={styles.selectionIndicator} />}
             </TouchableOpacity>
         );
     };
+
+
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -176,16 +180,6 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 16,
         color: "#fff",
-    },
-    selectionIndicator: {
-        position: "absolute",
-        right: 0,
-        top: 0,
-        bottom: 0,
-        width: 4,
-        backgroundColor: "white",
-        borderTopRightRadius: 16,
-        borderBottomRightRadius: 16,
     },
     saveButton: {
         backgroundColor: Colors.dark.tint,
