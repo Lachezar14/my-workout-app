@@ -4,10 +4,11 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
-import {saveExercise} from "@/repository/exercisesRepository";
+import {saveExercise} from "@/repository/exerciseRepoSupabase.ts";
 import {Exercise} from "@/types/exercise";
 import {HeaderDefault} from "@/components/header/headerDefault";
 import {SafeAreaView} from "react-native-safe-area-context";
+import {uploadImageToSupabase} from "@/repository/storageSupabase";
 
 export default function AddExercise() {
     const [name, setName] = useState("");
@@ -21,6 +22,7 @@ export default function AddExercise() {
             mediaTypes: ImagePicker.MediaTypeOptions.All, // images & gifs
             aspect: [4, 3],
             quality: 1,
+            allowsEditing: false,
         });
 
         if (!result.canceled) {
@@ -28,20 +30,26 @@ export default function AddExercise() {
         }
     };
 
-    // Save exercise
     const handleSaveExercise = async () => {
-        const newExercise: Exercise = {
-            id: Date.now().toString(),
-            name: name || "Untitled Exercise",
-            description: description || "",
-            image: imageUri ?? undefined,
-        };
-
         try {
+            let imageUrl: string | undefined;
+
+            if (imageUri) {
+                imageUrl = await uploadImageToSupabase(imageUri, name || "exercise");
+                if (!imageUrl) throw new Error("Image upload failed");
+            }
+
+            const newExercise: Exercise = {
+                id: Date.now().toString(),
+                name: name || "Untitled Exercise",
+                description: description || "",
+                image_url: imageUrl, // make sure your DB column is image_url
+            };
+
             await saveExercise(newExercise);
             router.back();
         } catch (error) {
-            console.error("Error saving workout:", error);
+            console.error("Error saving exercise:", error);
         }
     };
 

@@ -49,8 +49,8 @@ export function ExerciseCard({
             >
                 <Image
                     source={
-                        item.image
-                            ? { uri: item.image }
+                        item.image_url
+                            ? { uri: item.image_url }
                             : require("@/assets/images/favicon.png")
                     }
                     style={styles.image}

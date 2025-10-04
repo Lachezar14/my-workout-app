@@ -14,8 +14,8 @@ import { Colors } from "@/constants/theme";
 import { Workout } from "@/types/workout";
 import { ExerciseWithSets } from "@/types/exercise";
 import {MaterialCommunityIcons, MaterialIcons} from "@expo/vector-icons";
-import {deleteWorkout, getWorkoutById, updateWorkoutExercises} from "@/repository/workoutRepository";
-import {getExercises} from "@/repository/exercisesRepository";
+import {deleteWorkout, getWorkoutById, updateWorkoutExercises} from "@/repository/workoutRepoSupabase.ts";
+import {getExercises} from "@/repository/exerciseRepoSupabase.ts";
 import {ExerciseCard} from "@/components/exercise/exerciseCard";
 
 const CARD_HEIGHT = 80; // total height of the card

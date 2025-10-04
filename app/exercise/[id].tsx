@@ -14,11 +14,11 @@ import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import { Exercise } from "@/types/exercise";
 import * as ImagePicker from "expo-image-picker";
-import {deleteExercise, getExerciseById, updateExercise} from "@/repository/exercisesRepository";
+import {deleteExercise, getExerciseById, updateExercise} from "@/repository/exerciseRepoSupabase.ts";
 import {useModal} from "@/context/ModalContext";
-import {MaterialCommunityIcons} from "@expo/vector-icons";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {HeaderDefault} from "@/components/header/headerDefault";
+import {uploadImageToSupabase} from "@/repository/storageSupabase";
 
 export default function ExerciseDetails() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,7 +40,7 @@ export default function ExerciseDetails() {
                 setExercise(found);
                 setTitle(found.name);
                 setDescription(found.description || "");
-                setImage(found.image);
+                setImage(found.image_url);
             }
         };
         loadExercise();
@@ -73,9 +73,34 @@ export default function ExerciseDetails() {
         if (!exercise) return;
 
         try {
-            const updated = { ...exercise, name: title, description, image };
+            let imageUrl = image;
+
+            // Check if a new image was selected (local URI)
+            if (image && image.startsWith('file://')) {
+                // Upload new image to Supabase
+                const uploadedUrl = await uploadImageToSupabase(image, title || exercise.name);
+                if (!uploadedUrl) {
+                    Alert.alert("Error", "Failed to upload image");
+                    return;
+                }
+                imageUrl = uploadedUrl;
+
+                // Optional: Delete old image from Supabase if you want to clean up
+                // if (exercise.image_url) {
+                //     await deleteImageFromSupabase(exercise.image_url);
+                // }
+            }
+
+            const updated = {
+                ...exercise,
+                name: title,
+                description,
+                image_url: imageUrl
+            };
+
             await updateExercise(updated);
             setExercise(updated);
+            setImage(imageUrl); // Update to the new URL
             setEditMode(false);
         } catch (error) {
             console.error(error);
@@ -86,7 +111,7 @@ export default function ExerciseDetails() {
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
+            allowsEditing: false,
             quality: 0.7,
         });
         if (!result.canceled) {
@@ -111,6 +136,7 @@ export default function ExerciseDetails() {
                         source={image}
                         style={styles.image}
                         contentFit="cover"
+                        transition={300}
                     />
                 )}
                 {editMode && (

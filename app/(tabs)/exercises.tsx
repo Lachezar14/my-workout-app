@@ -13,7 +13,7 @@ import { Image } from "expo-image";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import {Exercise} from "@/types/exercise";
-import {getExercises} from "@/repository/exercisesRepository";
+import {getExercises} from "@/repository/exerciseRepoSupabase.ts";
 
 const { width } = Dimensions.get("window");
 const CARD_HEIGHT = 80; // card height
@@ -40,8 +40,8 @@ export default function ExercisesScreen() {
         >
             <Image
                 source={
-                    item.image
-                        ? item.image
+                    item.image_url
+                        ? item.image_url
                         : require("@/assets/images/favicon.png")
                 }
                 style={styles.cardImage}

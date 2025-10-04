@@ -6,7 +6,7 @@
 export type ExerciseWithSets = {
     id: string;
     name: string;
-    image?: string;
+    image_url?: string;
     sets: Set[];
 };
 
@@ -14,5 +14,5 @@ export type Exercise = {
     id: string;
     name: string;
     description: string;
-    image?: string;
+    image_url?: string;
 };

@@ -8,15 +8,15 @@ import {
     Image,
     Dimensions,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import { Workout } from "@/types/workout";
 import { Exercise } from "@/types/exercise";
-import {saveWorkout} from "@/repository/workoutRepository";
+import {saveWorkout} from "@/repository/workoutRepoSupabase.ts";
 import {HeaderDefault} from "@/components/header/headerDefault";
+import {getExercises} from "@/repository/exerciseRepoSupabase.ts";
 
 const { width } = Dimensions.get("window");
 const CARD_HEIGHT = 80;
@@ -30,8 +30,8 @@ export default function AddWorkout() {
 
     useEffect(() => {
         const loadExercises = async () => {
-            const data = await AsyncStorage.getItem("exercises");
-            setExercises(data ? JSON.parse(data) : []);
+            const data = await getExercises();
+            setExercises(data);
         };
         loadExercises();
     }, []);
@@ -74,8 +74,8 @@ export default function AddWorkout() {
             >
                 <Image
                     source={
-                        item.image
-                            ? { uri: item.image }
+                        item.image_url
+                            ? { uri: item.image_url }
                             : require("@/assets/images/favicon.png")
                     }
                     style={styles.cardImage}
