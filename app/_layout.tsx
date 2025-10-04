@@ -22,11 +22,12 @@ export default function RootLayout() {
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
           <ThemeProvider value={theme}>
               <Stack>
+                  <Stack.Screen name="index" options={{ headerShown: false }} />
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen name="exercise" options={{ headerShown: false }} />
                   <Stack.Screen name="workout" options={{ headerShown: false }} />
                   <Stack.Screen name="add-exercise" options={{ headerShown: false }} />
-                    <Stack.Screen name="add-workout" options={{ headerShown:false }} />
+                  <Stack.Screen name="add-workout" options={{ headerShown:false }} />
                   <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
               </Stack>
               <StatusBar style="auto" />
