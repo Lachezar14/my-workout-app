@@ -5,7 +5,6 @@ import {
     TouchableOpacity,
     View,
     TextInput,
-    Image,
     Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +16,7 @@ import { Exercise } from "@/types/exercise";
 import {saveWorkout} from "@/repository/workoutRepoSupabase.ts";
 import {HeaderDefault} from "@/components/header/headerDefault";
 import {getExercises} from "@/repository/exerciseRepoSupabase.ts";
+import { Image } from "expo-image";
 
 const { width } = Dimensions.get("window");
 const CARD_HEIGHT = 80;
@@ -79,6 +79,7 @@ export default function AddWorkout() {
                             : require("@/assets/images/favicon.png")
                     }
                     style={styles.cardImage}
+                    autoplay={false}
                 />
                 <View style={styles.cardTextContainer}>
                     <ThemedText type="defaultSemiBold" style={styles.cardTitle}>

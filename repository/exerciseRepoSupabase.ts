@@ -1,8 +1,5 @@
 ﻿import { Exercise } from "@/types/exercise";
-import * as FileSystem from "expo-file-system";
 import {supabase} from "@/supabaseClient";
-
-const BUCKET = "exercise-images";
 
 /**
  * Fetch all exercises
@@ -26,41 +23,6 @@ export const getExerciseById = async (id: string): Promise<Exercise | null> => {
         return null;
     }
     return data;
-};
-
-/**
- * Upload an image to Supabase Storage and return its public URL
- */
-const uploadImageToSupabase = async (localUri: string, exerciseId: string) => {
-    try {
-        const fileExt = localUri.split(".").pop();
-        const fileName = `${exerciseId}.${fileExt}`;
-        const filePath = `exercises/${fileName}`;
-
-        // Read the image as base64
-        const base64 = await FileSystem.readAsStringAsync(localUri, {
-            encoding: FileSystem.EncodingType.Base64,
-        });
-
-        // Convert base64 to Blob
-        const fileBlob = Buffer.from(base64, "base64");
-
-        const { error: uploadError } = await supabase.storage
-            .from("exercise-images") // your bucket name
-            .upload(filePath, fileBlob, {
-                contentType: `image/${fileExt}`,
-                upsert: true,
-            });
-
-        if (uploadError) throw uploadError;
-
-        // Get the public URL
-        const { data } = supabase.storage.from("exercise-images").getPublicUrl(filePath);
-        return data.publicUrl;
-    } catch (error) {
-        console.error("Image upload failed:", error);
-        return null;
-    }
 };
 
 /**

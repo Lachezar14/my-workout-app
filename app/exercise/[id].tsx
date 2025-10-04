@@ -15,10 +15,9 @@ import { Colors } from "@/constants/theme";
 import { Exercise } from "@/types/exercise";
 import * as ImagePicker from "expo-image-picker";
 import {deleteExercise, getExerciseById, updateExercise} from "@/repository/exerciseRepoSupabase.ts";
-import {useModal} from "@/context/ModalContext";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {HeaderDefault} from "@/components/header/headerDefault";
-import {uploadImageToSupabase} from "@/repository/storageSupabase";
+import {deleteImageFromSupabase, replaceExerciseImage} from "@/repository/storageSupabase";
 
 export default function ExerciseDetails() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,11 +27,7 @@ export default function ExerciseDetails() {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [image, setImage] = useState<string | undefined>(undefined);
-    const { modal } = useLocalSearchParams<{ modal?: string }>();
-
-    const { isVisible, closeModal } = useModal();
-
-
+    
     useEffect(() => {
         const loadExercise = async () => {
             const found = await getExerciseById(id);
@@ -58,6 +53,10 @@ export default function ExerciseDetails() {
                     onPress: async () => {
                         try {
                             await deleteExercise(id);
+                            const imageDeleted = await deleteImageFromSupabase(exercise?.image_url);
+                            if (!imageDeleted) {
+                                console.warn("Failed to delete associated image");
+                            }
                             router.back();
                         } catch (error) {
                             console.error("Failed to delete workout:", error);
@@ -74,22 +73,12 @@ export default function ExerciseDetails() {
 
         try {
             let imageUrl = image;
-
-            // Check if a new image was selected (local URI)
-            if (image && image.startsWith('file://')) {
-                // Upload new image to Supabase
-                const uploadedUrl = await uploadImageToSupabase(image, title || exercise.name);
-                if (!uploadedUrl) {
-                    Alert.alert("Error", "Failed to upload image");
-                    return;
-                }
-                imageUrl = uploadedUrl;
-
-                // Optional: Delete old image from Supabase if you want to clean up
-                // if (exercise.image_url) {
-                //     await deleteImageFromSupabase(exercise.image_url);
-                // }
+            const uploadedUrl = await replaceExerciseImage(exercise.image_url, image, title || exercise.name);
+            if (!uploadedUrl) {
+                Alert.alert("Error", "Failed to upload image");
+                return;
             }
+            imageUrl = uploadedUrl;
 
             const updated = {
                 ...exercise,
@@ -100,20 +89,22 @@ export default function ExerciseDetails() {
 
             await updateExercise(updated);
             setExercise(updated);
-            setImage(imageUrl); // Update to the new URL
+            setImage(imageUrl);
             setEditMode(false);
         } catch (error) {
             console.error(error);
             Alert.alert("Error", "Failed to save exercise");
         }
     };
-
+    
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ImagePicker.MediaTypeOptions.All, // images & gifs
+            aspect: [4, 3],
+            quality: 1,
             allowsEditing: false,
-            quality: 0.7,
         });
+
         if (!result.canceled) {
             setImage(result.assets[0].uri);
         }
@@ -136,7 +127,6 @@ export default function ExerciseDetails() {
                         source={image}
                         style={styles.image}
                         contentFit="cover"
-                        transition={300}
                     />
                 )}
                 {editMode && (

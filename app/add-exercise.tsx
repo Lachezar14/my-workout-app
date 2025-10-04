@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { StyleSheet, TextInput, TouchableOpacity, Image, ScrollView } from "react-native";
+import { StyleSheet, TextInput, TouchableOpacity, ScrollView } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/themed-text";
@@ -9,6 +9,7 @@ import {Exercise} from "@/types/exercise";
 import {HeaderDefault} from "@/components/header/headerDefault";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {uploadImageToSupabase} from "@/repository/storageSupabase";
+import { Image } from "expo-image";
 
 export default function AddExercise() {
     const [name, setName] = useState("");
