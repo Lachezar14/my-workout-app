@@ -13,11 +13,11 @@ import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import { Exercise } from "@/types/exercise";
-import * as ImagePicker from "expo-image-picker";
-import {deleteExercise, getExerciseById, updateExercise} from "@/repository/exerciseRepoSupabase.ts";
+import {deleteExercise, getExerciseById, updateExercise} from "@/repository/supabase/exerciseRepoSupabase.ts";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {HeaderDefault} from "@/components/header/headerDefault";
-import {deleteImageFromSupabase, replaceExerciseImage} from "@/repository/storageSupabase";
+import {deleteImageFromSupabase, replaceExerciseImage} from "@/repository/supabase/storageSupabase";
+import { pickImage } from "@/utils/imageService";
 
 export default function ExerciseDetails() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,6 +40,13 @@ export default function ExerciseDetails() {
         };
         loadExercise();
     }, [id]);
+    
+    const handlePickImage = async () => {
+        const uri = await pickImage();
+        if (uri) {
+            setImage(uri);
+        }
+    };
 
     const handleDeleteExercise = async () => {
         Alert.alert(
@@ -97,19 +104,6 @@ export default function ExerciseDetails() {
         }
     };
     
-    const pickImage = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.All, // images & gifs
-            aspect: [4, 3],
-            quality: 1,
-            allowsEditing: false,
-        });
-
-        if (!result.canceled) {
-            setImage(result.assets[0].uri);
-        }
-    };
-
     if (!exercise) {
         return (
             <ThemedView style={styles.container}>
@@ -121,7 +115,7 @@ export default function ExerciseDetails() {
     return (
         <SafeAreaView style={styles.container}>
             <HeaderDefault title={"Exercise Details"} />
-            <TouchableOpacity onPress={editMode ? pickImage : undefined}>
+            <TouchableOpacity onPress={editMode ? handlePickImage : undefined}>
                 {image && (
                     <Image
                         source={image}

@@ -10,8 +10,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import {Workout} from "@/types/workout";
-import {getWorkouts} from "@/repository/workoutRepoSupabase.ts";
-import {getExercises} from "@/repository/exerciseRepoSupabase.ts";
+import {getWorkouts} from "@/repository/supabase/workoutRepoSupabase.ts";
+import {getExercises} from "@/repository/supabase/exerciseRepoSupabase.ts";
 
 export default function WorkoutsScreen() {
     const [workouts, setWorkouts] = useState<Workout[]>([]);

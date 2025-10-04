@@ -13,7 +13,7 @@ import { Image } from "expo-image";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import {Exercise} from "@/types/exercise";
-import {getExercises} from "@/repository/exerciseRepoSupabase.ts";
+import {getExercises} from "@/repository/supabase/exerciseRepoSupabase.ts";
 
 const { width } = Dimensions.get("window");
 const CARD_HEIGHT = 80; // card height
@@ -115,7 +115,6 @@ const styles = StyleSheet.create({
     cardImage: {
         width: IMAGE_WIDTH,
         height: "100%",
-        resizeMode: "cover",
     },
     cardTextContainer: {
         flex: 1,

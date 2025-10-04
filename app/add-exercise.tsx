@@ -1,36 +1,29 @@
 ﻿import { useState } from "react";
 import { StyleSheet, TextInput, TouchableOpacity, ScrollView } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
-import {saveExercise} from "@/repository/exerciseRepoSupabase.ts";
+import {saveExercise} from "@/repository/supabase/exerciseRepoSupabase.ts";
 import {Exercise} from "@/types/exercise";
 import {HeaderDefault} from "@/components/header/headerDefault";
 import {SafeAreaView} from "react-native-safe-area-context";
-import {uploadImageToSupabase} from "@/repository/storageSupabase";
+import {uploadImageToSupabase} from "@/repository/supabase/storageSupabase";
 import { Image } from "expo-image";
+import {pickImage} from "@/utils/imageService";
 
 export default function AddExercise() {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [imageUri, setImageUri] = useState<string | null>(null);
     const router = useRouter();
-
-    // Pick image or GIF
-    const pickImage = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.All, // images & gifs
-            aspect: [4, 3],
-            quality: 1,
-            allowsEditing: false,
-        });
-
-        if (!result.canceled) {
-            setImageUri(result.assets[0].uri);
+    
+    const handlePickImage = async () => {
+        const uri = await pickImage();
+        if (uri) {
+            setImageUri(uri);
         }
-    };
-
+    }
+    
     const handleSaveExercise = async () => {
         try {
             let imageUrl: string | undefined;
@@ -81,7 +74,7 @@ export default function AddExercise() {
                     multiline
                 />
     
-                <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
+                <TouchableOpacity style={styles.imageButton} onPress={handlePickImage}>
                     <ThemedText style={styles.imageButtonText}>
                         {imageUri ? "Change Image/GIF" : "Add Image/GIF"}
                     </ThemedText>

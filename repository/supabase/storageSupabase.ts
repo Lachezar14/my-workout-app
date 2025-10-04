@@ -1,7 +1,6 @@
 ﻿// @/repository/storageSupabase.ts
-import * as FileSystem from 'expo-file-system/legacy';
-import { decode } from 'base64-arraybuffer';
 import {supabase} from "@/supabaseClient";
+import {encodeImage} from "@/utils/imageService";
 
 /**
  * Upload an image or GIF to Supabase Storage and return its public URL
@@ -11,27 +10,12 @@ export async function uploadImageToSupabase(
     exerciseName: string
 ): Promise<string | null> {
     try {
-        // Read file as base64
-        const base64 = await FileSystem.readAsStringAsync(fileUri, {
-            encoding: FileSystem.EncodingType.Base64,
-        });
-
-        // Determine file extension
-        const fileExt = fileUri.split('.').pop()?.toLowerCase() || 'jpg';
-        const fileName = `${exerciseName.replace(/\s+/g, '_')}_${Date.now()}.${fileExt}`;
-        const filePath = fileName;
-
-        // Determine content type
-        let contentType = `image/${fileExt}`;
-        if (fileExt === 'gif') contentType = 'image/gif';
-
-        // Convert to ArrayBuffer (preserves raw binary)
-        const arrayBuffer = decode(base64);
+        const { arrayBuffer, fileName, contentType } = await encodeImage(fileUri, exerciseName);
 
         // Upload to Supabase
         const { data, error } = await supabase.storage
             .from('exercise_images')
-            .upload(filePath, arrayBuffer, {
+            .upload(fileName, arrayBuffer, {
                 contentType,
                 upsert: false,
             });

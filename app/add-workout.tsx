@@ -13,9 +13,9 @@ import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import { Workout } from "@/types/workout";
 import { Exercise } from "@/types/exercise";
-import {saveWorkout} from "@/repository/workoutRepoSupabase.ts";
+import {saveWorkout} from "@/repository/supabase/workoutRepoSupabase.ts";
 import {HeaderDefault} from "@/components/header/headerDefault";
-import {getExercises} from "@/repository/exerciseRepoSupabase.ts";
+import {getExercises} from "@/repository/supabase/exerciseRepoSupabase.ts";
 import { Image } from "expo-image";
 
 const { width } = Dimensions.get("window");
