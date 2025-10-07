@@ -18,6 +18,9 @@ import {deleteWorkout, getWorkoutById, updateWorkoutExercises} from "@/repositor
 import {getExercises} from "@/repository/supabase/exerciseRepoSupabase.ts";
 import {ExerciseCard} from "@/components/exercise/exerciseCard";
 import DraggableFlatList, {ScaleDecorator} from "react-native-draggable-flatlist";
+import HeaderMenu from "@/components/header/HeaderMenu";
+import useKeyboardVisible from "@/utils/useKeyboardVisible.ts";
+
 
 const CARD_HEIGHT = 80; // total height of the card
 const IMAGE_WIDTH = 100; // can be smaller or bigger than CARD_HEIGHT
@@ -28,6 +31,7 @@ export default function WorkoutDetailsScreen() {
     const [exercisesWithSets, setExercisesWithSets] = useState<ExerciseWithSets[]>([]);
     const [editMode, setEditMode] = useState(false);
     const router = useRouter();
+    const keyboardVisible = useKeyboardVisible();
 
     // Load workout & exercises
     useFocusEffect(
@@ -135,28 +139,6 @@ export default function WorkoutDetailsScreen() {
             ]
         );
     };
-
-    const renderItem = ({ item, drag, isActive }: any) => (
-        <ScaleDecorator>
-            <TouchableOpacity
-                activeOpacity={0.9}
-                onLongPress={editMode ? drag : undefined}
-                disabled={!editMode}
-            >
-                <ExerciseCard
-                    item={item}
-                    editMode={editMode}
-                    updateSet={updateSet}
-                    addSet={addSet}
-                    removeSet={removeSet}
-                    onPress={() => router.push(`/exercise/${item.id}`)}
-                    style={[
-                        isActive && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                    ]}
-                />
-            </TouchableOpacity>
-        </ScaleDecorator>
-    );
     
     if (!workout) return null;
 
@@ -184,31 +166,11 @@ export default function WorkoutDetailsScreen() {
                         >
                             {workout.name}
                         </ThemedText>
-
-                        {/* Edit + Delete buttons */}
-                        <View style={styles.headerButtons}>
-                            <TouchableOpacity onPress={handleEditMode} style={styles.textButton}>
-                                {editMode ? (
-                                    <MaterialCommunityIcons
-                                        name="checkbox-marked-circle-outline"
-                                        size={20}
-                                        color={Colors.dark.tint}
-                                    />
-                                ) : (
-                                    <MaterialIcons name="edit" size={20} color={Colors.dark.tint} />
-                                )}
-                                <ThemedText style={styles.buttonText}>
-                                    {editMode ? "Save" : "Edit"}
-                                </ThemedText>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity onPress={handleDeleteWorkout} style={styles.textButton}>
-                                <MaterialCommunityIcons name="delete" size={20} color="#FF4C4C" />
-                                <ThemedText style={[styles.buttonText, { color: "#FF4C4C" }]}>
-                                    Delete
-                                </ThemedText>
-                            </TouchableOpacity>
-                        </View>
+                        
+                        <HeaderMenu
+                            onEdit={() => setEditMode(true)}
+                            onDelete={handleDeleteWorkout}
+                        />
                     </View>
 
                     {/* Exercises list (drag enabled only in editMode) */}
@@ -230,6 +192,13 @@ export default function WorkoutDetailsScreen() {
                         contentContainerStyle={{ paddingBottom: 120 }}
                         showsVerticalScrollIndicator={false}
                     />
+
+                {/* Save button fixed at bottom */}
+                {editMode && !keyboardVisible && (
+                    <TouchableOpacity style={styles.saveButtonBottom} onPress={handleUpdateWorkout}>
+                        <ThemedText style={styles.saveButtonText}>Save Workout</ThemedText>
+                    </TouchableOpacity>
+                )}
             </SafeAreaView>
         </KeyboardAvoidingView>
     );
