@@ -17,6 +17,7 @@ import {MaterialCommunityIcons, MaterialIcons} from "@expo/vector-icons";
 import {deleteWorkout, getWorkoutById, updateWorkoutExercises} from "@/repository/supabase/workoutRepoSupabase.ts";
 import {getExercises} from "@/repository/supabase/exerciseRepoSupabase.ts";
 import {ExerciseCard} from "@/components/exercise/exerciseCard";
+import DraggableFlatList, {ScaleDecorator} from "react-native-draggable-flatlist";
 
 const CARD_HEIGHT = 80; // total height of the card
 const IMAGE_WIDTH = 100; // can be smaller or bigger than CARD_HEIGHT
@@ -36,14 +37,14 @@ export default function WorkoutDetailsScreen() {
                 const exercises = await getExercises();
                 if (!foundWorkout) return;
 
-                // Merge workout exercises with master exercises
                 const merged: ExerciseWithSets[] = foundWorkout.exercises
-                    .map(we => {
-                        const ex = exercises.find(e => e.id === we.exerciseId);
+                    .map((we) => {
+                        const ex = exercises.find((e) => e.id === we.exerciseId);
                         if (!ex) return null;
-                        return { ...ex, sets: we.sets };
+                        return { ...ex, sets: we.sets, order: we.order ?? 0 };
                     })
-                    .filter((e): e is ExerciseWithSets => e !== null);
+                    .filter((e): e is ExerciseWithSets => e !== null)
+                    .sort((a, b) => a.order - b.order); // ensure order before render
 
                 setWorkout(foundWorkout);
                 setExercisesWithSets(merged);
@@ -97,7 +98,14 @@ export default function WorkoutDetailsScreen() {
     const handleUpdateWorkout = async () => {
         if (!workout) return;
         try {
-            await updateWorkoutExercises(workout.id, exercisesWithSets);
+            // update order index before saving
+            const updated = exercisesWithSets.map((ex, i) => ({
+                ...ex,
+                order: i,
+            }));
+
+            await updateWorkoutExercises(workout.id, updated);
+            setExercisesWithSets(updated);
             setEditMode(false);
         } catch (error) {
             console.error("Failed to save workout:", error);
@@ -127,6 +135,28 @@ export default function WorkoutDetailsScreen() {
             ]
         );
     };
+
+    const renderItem = ({ item, drag, isActive }: any) => (
+        <ScaleDecorator>
+            <TouchableOpacity
+                activeOpacity={0.9}
+                onLongPress={editMode ? drag : undefined}
+                disabled={!editMode}
+            >
+                <ExerciseCard
+                    item={item}
+                    editMode={editMode}
+                    updateSet={updateSet}
+                    addSet={addSet}
+                    removeSet={removeSet}
+                    onPress={() => router.push(`/exercise/${item.id}`)}
+                    style={[
+                        isActive && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                    ]}
+                />
+            </TouchableOpacity>
+        </ScaleDecorator>
+    );
     
     if (!workout) return null;
 
@@ -136,23 +166,26 @@ export default function WorkoutDetailsScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 80}
         >
-            <SafeAreaView>
+            <SafeAreaView style={styles.safeArea}>
                 {/* Scrollable content */}
-                <ScrollView
-                    contentContainerStyle={{ padding: 16, paddingBottom: 120 }} // leave space for Save button
-                    keyboardShouldPersistTaps="handled"
-                >
                     {/* Header */}
                     <View style={styles.headerRow}>
                         {/* Back button */}
                         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                             <MaterialCommunityIcons name="chevron-left" size={24} color={Colors.dark.tint} />
                         </TouchableOpacity>
-                        
-                        <ThemedText type="defaultSemiBold" style={styles.title}>
+
+                        {/* Title */}
+                        <ThemedText
+                            type="defaultSemiBold"
+                            style={styles.title}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
                             {workout.name}
                         </ThemedText>
-                        
+
+                        {/* Edit + Delete buttons */}
                         <View style={styles.headerButtons}>
                             <TouchableOpacity onPress={handleEditMode} style={styles.textButton}>
                                 {editMode ? (
@@ -178,26 +211,25 @@ export default function WorkoutDetailsScreen() {
                         </View>
                     </View>
 
-                    {/* Exercises */}
-                    {exercisesWithSets.map(item => (
-                        <ExerciseCard
-                            key={item.id}
-                            item={item}
-                            editMode={editMode}
-                            updateSet={updateSet}
-                            addSet={addSet}
-                            removeSet={removeSet}
-                            onPress={() => router.push(`/exercise/${item.id}`)}
-                        />
-                    ))}
-                </ScrollView>
-
-                {/* Save button fixed at bottom */}
-                {/*{editMode && !keyboardVisible && (
-                    <TouchableOpacity style={styles.saveButtonBottom} onPress={handleUpdateWorkout}>
-                        <ThemedText style={styles.saveButtonText}>Save Workout</ThemedText>
-                    </TouchableOpacity>
-                )}*/}
+                    {/* Exercises list (drag enabled only in editMode) */}
+                    <DraggableFlatList
+                        data={exercisesWithSets}
+                        onDragEnd={({ data }) => setExercisesWithSets(data)}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item, drag, isActive }) => (
+                            <ExerciseCard
+                                item={item}
+                                editMode={editMode}
+                                updateSet={updateSet}
+                                addSet={addSet}
+                                removeSet={removeSet}
+                                onPress={() => router.push(`/exercise/${item.id}`)}
+                                onLongPressDrag={drag}
+                            />
+                        )}
+                        contentContainerStyle={{ paddingBottom: 120 }}
+                        showsVerticalScrollIndicator={false}
+                    />
             </SafeAreaView>
         </KeyboardAvoidingView>
     );
@@ -219,12 +251,16 @@ const styles = StyleSheet.create({
         padding: 4,
     },
     title: {
+        flex: 1, // allow it to take available space between buttons
         fontSize: 22,
         textAlign: "center",
         color: Colors.dark.text,
+        marginHorizontal: 8, // small breathing room
     },
     headerButtons: {
         flexDirection: "row",
+        alignItems: "center",
+        flexShrink: 0,
         gap: 12,
     },
     textButton: {

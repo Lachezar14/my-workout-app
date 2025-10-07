@@ -48,9 +48,10 @@ export default function AddWorkout() {
         const newWorkout: Workout = {
             id: Date.now().toString(),
             name: name || "Untitled Workout",
-            exercises: selected.map((ex) => ({
+            exercises: selected.map((ex, index) => ({
                 exerciseId: ex.id,
                 sets: [],
+                order: index,
             })),
         };
 

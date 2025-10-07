@@ -11,18 +11,20 @@ export const getWorkouts = async (): Promise<Workout[]> => {
     if (error) throw error;
     if (!workouts) return [];
 
-    // Fetch all workout exercises
+    // Fetch all workout_exercises
     const { data: workoutExercises } = await supabase
         .from("workout_exercises")
         .select("*");
 
     return workouts.map((w) => ({
         ...w,
-        exercises: workoutExercises
+        exercises: (workoutExercises || [])
             .filter((we) => we.workout_id === w.id)
+            .sort((a, b) => a.exercise_order - b.exercise_order) // <-- order them
             .map((we) => ({
                 exerciseId: we.exercise_id,
                 sets: we.sets,
+                order: we.exercise_order, // <-- include in object
             })),
     }));
 };
@@ -42,13 +44,15 @@ export const getWorkoutById = async (id: string): Promise<Workout | null> => {
     const { data: workoutExercises } = await supabase
         .from("workout_exercises")
         .select("*")
-        .eq("workout_id", id);
+        .eq("workout_id", id)
+        .order("exercise_order", { ascending: true }); // <-- use Supabase ordering
 
     return {
         ...workout,
         exercises: (workoutExercises || []).map((we) => ({
             exerciseId: we.exercise_id,
             sets: we.sets,
+            order: we.exercise_order, // <-- include
         })),
     };
 };
@@ -57,10 +61,12 @@ export const getWorkoutById = async (id: string): Promise<Workout | null> => {
  * Save a new workout and its exercises
  */
 export const saveWorkout = async (workout: Workout) => {
-    const { error: workoutError } = await supabase.from("workouts").insert([{
-        id: workout.id,
-        name: workout.name,
-    }]);
+    const { error: workoutError } = await supabase.from("workouts").insert([
+        {
+            id: workout.id,
+            name: workout.name,
+        },
+    ]);
     if (workoutError) throw workoutError;
 
     // Insert workout_exercises
@@ -70,6 +76,7 @@ export const saveWorkout = async (workout: Workout) => {
                 workout_id: workout.id,
                 exercise_id: we.exerciseId,
                 sets: we.sets,
+                exercise_order: we.order, // <-- save order
             }))
         );
         if (weError) throw weError;
@@ -102,7 +109,7 @@ export const updateWorkoutExercises = async (
     workoutId: string,
     exercisesWithSets: ExerciseWithSets[]
 ) => {
-    // Fetch existing workout exercises
+    // Fetch existing workout_exercises
     const { data: existingWE, error } = await supabase
         .from("workout_exercises")
         .select("*")
@@ -110,22 +117,28 @@ export const updateWorkoutExercises = async (
     if (error) throw error;
 
     // Update or insert each exercise
-    for (const ex of exercisesWithSets) {
+    for (const [index, ex] of exercisesWithSets.entries()) {
         const existing = existingWE?.find((we) => we.exercise_id === ex.id);
         if (existing) {
             const { error: updateError } = await supabase
                 .from("workout_exercises")
-                .update({ sets: ex.sets })
+                .update({
+                    sets: ex.sets,
+                    exercise_order: index, // <-- update order
+                })
                 .eq("id", existing.id);
             if (updateError) throw updateError;
         } else {
             const { error: insertError } = await supabase
                 .from("workout_exercises")
-                .insert([{
-                    workout_id: workoutId,
-                    exercise_id: ex.id,
-                    sets: ex.sets,
-                }]);
+                .insert([
+                    {
+                        workout_id: workoutId,
+                        exercise_id: ex.id,
+                        sets: ex.sets,
+                        exercise_order: index, // <-- insert with order
+                    },
+                ]);
             if (insertError) throw insertError;
         }
     }

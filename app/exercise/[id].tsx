@@ -80,12 +80,19 @@ export default function ExerciseDetails() {
 
         try {
             let imageUrl = image;
-            const uploadedUrl = await replaceExerciseImage(exercise.image_url, image, title || exercise.name);
-            if (!uploadedUrl) {
-                Alert.alert("Error", "Failed to upload image");
-                return;
+            // Upload only if a new local image was selected
+            if (image && image.startsWith("file://")) {
+                const uploadedUrl = await replaceExerciseImage(
+                    exercise.image_url,
+                    image,
+                    title || exercise.name
+                );
+                if (!uploadedUrl) {
+                    Alert.alert("Error", "Failed to upload image");
+                    return;
+                }
+                imageUrl = uploadedUrl;
             }
-            imageUrl = uploadedUrl;
 
             const updated = {
                 ...exercise,

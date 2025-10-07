@@ -17,7 +17,7 @@ export async function pickImage (){
         return result.assets[0].uri;
     }
     return null;
-};
+}
 
 /**
  * Reads a file URI, converts it to ArrayBuffer, and returns metadata

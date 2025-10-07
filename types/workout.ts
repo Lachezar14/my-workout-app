@@ -2,7 +2,8 @@
 
 export type WorkoutExercise = {
     exerciseId: string;
-    sets: { reps: string }[];
+    sets: { reps: string, kgs?: string }[];
+    order: number;
 };
 
 export type Workout = {

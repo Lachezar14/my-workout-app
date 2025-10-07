@@ -18,6 +18,7 @@ type ExerciseCardProps = {
     addSet: (exerciseId: string) => void;
     removeSet: (exerciseId: string) => void;
     onPress?: () => void; // e.g. navigate to exercise details
+    onLongPressDrag?: () => void;
 };
 
 export function ExerciseCard({
@@ -27,6 +28,7 @@ export function ExerciseCard({
                                  addSet,
                                  removeSet,
                                  onPress,
+                                 onLongPressDrag,
                              }: ExerciseCardProps) {
     const [expanded, setExpanded] = useState(false);
 
@@ -46,6 +48,8 @@ export function ExerciseCard({
                 style={styles.card}
                 onPress={onPress}
                 activeOpacity={0.8}
+                onLongPress={onLongPressDrag}
+                delayLongPress={150}
             >
                 <Image
                     source={
