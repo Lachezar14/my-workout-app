@@ -19,6 +19,7 @@ type ExerciseCardProps = {
     removeSet: (exerciseId: string) => void;
     onPress?: () => void; // e.g. navigate to exercise details
     onLongPressDrag?: () => void;
+    onDelete?: (exerciseId: string) => void;
 };
 
 export function ExerciseCard({
@@ -29,6 +30,7 @@ export function ExerciseCard({
                                  removeSet,
                                  onPress,
                                  onLongPressDrag,
+                                 onDelete,
                              }: ExerciseCardProps) {
     const [expanded, setExpanded] = useState(false);
 
@@ -63,6 +65,15 @@ export function ExerciseCard({
                 <View style={styles.textContainer}>
                     <ThemedText style={styles.name}>{item.name}</ThemedText>
                 </View>
+
+                {editMode && (
+                    <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => onDelete?.(item.id)}
+                    >
+                        <MaterialIcons name="delete" size={20} color={Colors.dark.tint} />
+                    </TouchableOpacity>
+                )}
             </TouchableOpacity>
 
             {/* Accordion toggle */}
@@ -300,5 +311,13 @@ const styles = StyleSheet.create({
         marginLeft: 6,
         fontSize: 14,
         fontWeight: "600",
+    },
+    deleteButton: {
+        position: "absolute",
+        top: 8,
+        right: 8,
+        padding: 4,
+        borderRadius: 8,
+        backgroundColor: "rgba(255,255,255,0.1)",
     },
 });

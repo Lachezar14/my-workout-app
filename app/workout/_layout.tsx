@@ -13,6 +13,14 @@ export default function WorkoutLayout() {
                     headerShown: false,
                 }}
             />
+            {/* Add exercise to workout screen */}
+            <Stack.Screen
+                name="add-exercise-to-workout"
+                options={{
+                    headerTitle: 'Add Exercise',
+                    headerShown: false,
+                }}
+            />
         </Stack>
     );
 }

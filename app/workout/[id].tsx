@@ -5,7 +5,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     Alert,
-    TouchableOpacity, ScrollView,
+    TouchableOpacity,
 } from "react-native";
 import {useFocusEffect, useLocalSearchParams, useRouter} from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,11 +13,16 @@ import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
 import { Workout } from "@/types/workout";
 import { ExerciseWithSets } from "@/types/exercise";
-import {MaterialCommunityIcons, MaterialIcons} from "@expo/vector-icons";
-import {deleteWorkout, getWorkoutById, updateWorkoutExercises} from "@/repository/supabase/workoutRepoSupabase.ts";
+import {MaterialCommunityIcons} from "@expo/vector-icons";
+import {
+    deleteExerciseFromWorkout,
+    deleteWorkout,
+    getWorkoutById,
+    updateWorkoutExercises
+} from "@/repository/supabase/workoutRepoSupabase.ts";
 import {getExercises} from "@/repository/supabase/exerciseRepoSupabase.ts";
 import {ExerciseCard} from "@/components/exercise/exerciseCard";
-import DraggableFlatList, {ScaleDecorator} from "react-native-draggable-flatlist";
+import DraggableFlatList from "react-native-draggable-flatlist";
 import HeaderMenu from "@/components/header/HeaderMenu";
 import useKeyboardVisible from "@/utils/useKeyboardVisible.ts";
 
@@ -65,38 +70,27 @@ export default function WorkoutDetailsScreen() {
         setEditMode(!editMode);
     }
 
-    const updateSet = (exerciseId: string, setIndex: number, field: "reps" | "kgs", value: string) => {
-        setExercisesWithSets((prev) =>
-            prev.map((ex) =>
-                ex.id === exerciseId
-                    ? {
-                        ...ex,
-                        sets: ex.sets.map((s, i) =>
-                            i === setIndex ? { ...s, [field]: value } : s
-                        ),
-                    }
-                    : ex
-            )
-        );
-    };
-
-    const addSet = (exerciseId: string) => {
-        setExercisesWithSets((prev) =>
-            prev.map((ex) =>
-                ex.id === exerciseId
-                    ? { ...ex, sets: [...ex.sets, { reps: "", kgs: "" }] }
-                    : ex
-            )
-        );
-    };
-    
-    const removeSet = (exerciseId: string) => {
+    const updateSet = useCallback((exerciseId: string, setIndex: number, field: "reps" | "kgs", value: string) => {
         setExercisesWithSets(prev =>
             prev.map(ex =>
-                ex.id === exerciseId ? { ...ex, sets: ex.sets.slice(0, -1) } : ex
+                ex.id === exerciseId
+                    ? { ...ex, sets: ex.sets.map((s, i) => i === setIndex ? { ...s, [field]: value } : s) }
+                    : ex
             )
         );
-    };
+    }, []);
+
+    const addSet = useCallback((exerciseId: string) => {
+        setExercisesWithSets(prev =>
+            prev.map(ex => ex.id === exerciseId ? { ...ex, sets: [...ex.sets, { reps: "", kgs: "" }] } : ex)
+        );
+    }, []);
+
+    const removeSet = useCallback((exerciseId: string) => {
+        setExercisesWithSets(prev =>
+            prev.map(ex => ex.id === exerciseId ? { ...ex, sets: ex.sets.slice(0, -1) } : ex)
+        );
+    }, []);
 
     // Save workout
     const handleUpdateWorkout = async () => {
@@ -113,6 +107,17 @@ export default function WorkoutDetailsScreen() {
             setEditMode(false);
         } catch (error) {
             console.error("Failed to save workout:", error);
+        }
+    };
+
+    const handleDeleteExercise = async (exerciseId: string) => {
+        try {
+            await deleteExerciseFromWorkout(workout.id, exerciseId);
+            // remove locally
+            setExercisesWithSets(prev => prev.filter(ex => ex.id !== exerciseId));
+        } catch (error) {
+            console.error("Failed to delete exercise:", error);
+            Alert.alert("Error", "Failed to delete exercise");
         }
     };
 
@@ -170,6 +175,10 @@ export default function WorkoutDetailsScreen() {
                         <HeaderMenu
                             onEdit={() => setEditMode(true)}
                             onDelete={handleDeleteWorkout}
+                            onAddExercise={() => router.push({
+                                pathname: 'workout/add-exercise-to-workout',
+                                params: { workoutId: workout.id }
+                            })}
                         />
                     </View>
 
@@ -187,6 +196,7 @@ export default function WorkoutDetailsScreen() {
                                 removeSet={removeSet}
                                 onPress={() => router.push(`/exercise/${item.id}`)}
                                 onLongPressDrag={drag}
+                                onDelete={() => handleDeleteExercise(item.id)}
                             />
                         )}
                         contentContainerStyle={{ paddingBottom: 120 }}

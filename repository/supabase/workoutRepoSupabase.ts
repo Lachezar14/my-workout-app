@@ -30,6 +30,21 @@ export const getWorkouts = async (): Promise<Workout[]> => {
 };
 
 /**
+ * Fetch all exercise IDs for a specific workout
+ */
+export const getExerciseIDsInWorkout = async (workoutId: string): Promise<string[]> => {
+    const { data, error } = await supabase
+        .from("workout_exercises")
+        .select("exercise_id")
+        .eq("workout_id", workoutId);
+
+    if (error) throw error;
+
+    // Return just the exercise IDs as an array
+    return (data || []).map((row) => row.exercise_id);
+};
+
+/**
  * Fetch a single workout by id with exercises
  */
 export const getWorkoutById = async (id: string): Promise<Workout | null> => {
@@ -84,22 +99,36 @@ export const saveWorkout = async (workout: Workout) => {
 };
 
 /**
- * Delete workout and its exercises
+ * Add one or more exercises to an existing workout
  */
-export const deleteWorkout = async (id: string) => {
-    // Delete workout_exercises first
-    const { error: weError } = await supabase
-        .from("workout_exercises")
-        .delete()
-        .eq("workout_id", id);
-    if (weError) throw weError;
+export const addExercisesToWorkout = async (
+    workoutId: string,
+    exercises: { exerciseId: string; sets?: any; order?: number }[]
+) => {
+    if (!exercises || exercises.length === 0) return;
 
-    // Delete the workout
-    const { error: workoutError } = await supabase
-        .from("workouts")
-        .delete()
-        .eq("id", id);
-    if (workoutError) throw workoutError;
+    // Optional: fetch the current highest order to append correctly
+    const { data: existing, error: fetchError } = await supabase
+        .from("workout_exercises")
+        .select("exercise_order")
+        .eq("workout_id", workoutId)
+        .order("exercise_order", { ascending: false })
+        .limit(1);
+
+    if (fetchError) throw fetchError;
+
+    const startOrder = existing?.[0]?.exercise_order ?? 0;
+
+    // Prepare rows to insert
+    const rows = exercises.map((ex, i) => ({
+        workout_id: workoutId,
+        exercise_id: ex.exerciseId,
+        sets: ex.sets || [],
+        exercise_order: ex.order ?? startOrder + i + 1,
+    }));
+
+    const { error: insertError } = await supabase.from("workout_exercises").insert(rows);
+    if (insertError) throw insertError;
 };
 
 /**
@@ -142,4 +171,39 @@ export const updateWorkoutExercises = async (
             if (insertError) throw insertError;
         }
     }
+};
+
+/**
+ * Delete a specific exercise from a workout
+ */
+export const deleteExerciseFromWorkout = async (
+    workoutId: string,
+    exerciseId: string
+) => {
+    const { error } = await supabase
+        .from("workout_exercises")
+        .delete()
+        .eq("workout_id", workoutId)
+        .eq("exercise_id", exerciseId);
+
+    if (error) throw error;
+};
+
+/**
+ * Delete workout and its exercises
+ */
+export const deleteWorkout = async (id: string) => {
+    // Delete workout_exercises first
+    const { error: weError } = await supabase
+        .from("workout_exercises")
+        .delete()
+        .eq("workout_id", id);
+    if (weError) throw weError;
+
+    // Delete the workout
+    const { error: workoutError } = await supabase
+        .from("workouts")
+        .delete()
+        .eq("id", id);
+    if (workoutError) throw workoutError;
 };

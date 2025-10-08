@@ -6,9 +6,10 @@ import {Colors} from "@/constants/theme";
 interface HeaderMenuProps {
     onEdit: () => void;
     onDelete: () => void;
+    onAddExercise: () => void;
 }
 
-export default function HeaderMenu({ onEdit, onDelete }: HeaderMenuProps) {
+export default function HeaderMenu({ onEdit, onDelete, onAddExercise }: HeaderMenuProps) {
     const [visible, setVisible] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -32,6 +33,9 @@ export default function HeaderMenu({ onEdit, onDelete }: HeaderMenuProps) {
                     <Animated.View style={[styles.menu, { opacity: fadeAnim }]}>
                         <Pressable style={styles.menuItem} onPress={() => { toggleMenu(); onEdit(); }}>
                             <Text style={styles.menuText}>Edit</Text>
+                        </Pressable>
+                        <Pressable style={styles.menuItem} onPress={() => { toggleMenu(); onAddExercise(); }}>
+                            <Text style={styles.menuText}>Add</Text>
                         </Pressable>
                         <Pressable style={[styles.menuItem, styles.deleteItem]} onPress={() => { toggleMenu(); onDelete(); }}>
                             <Text style={[styles.menuText, { color: "red" }]}>Delete</Text>
